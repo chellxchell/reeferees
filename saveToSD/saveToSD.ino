@@ -402,6 +402,7 @@ void loop() {
 //Serial.println(F(" Celsius"));
 //Serial.flush();
 //#endif
+  
 digitalWrite(BLUE_PIN, LOW); //end of RTC communications
 pinMode(GREEN_PIN,INPUT_PULLUP); //green indicates sensor readings taking place
 LowPower.powerDown(SLEEP_30MS, ADC_OFF, BOD_ON); //optional delay here to make indicator pip more visible
@@ -429,55 +430,29 @@ analogPinReading = analogRead(analogInputPin);
 //  #endif
 //#endif
 //digitalWrite(GREEN_PIN, LOW);
-/* Get a new sensor event */
-  sensors_event_t event;
 
-  /* MAG TEST --------------------------------------------------------------------*/
-  mag.getEvent(&event);
-
-  /* Display the results (magnetic vector values are in micro-Tesla (uT)) */
-  /* Get compass measurements */
-  double MAG_READING = 0.0;
-  double x = event.magnetic.x;
-  double y = event.magnetic.y;
-  double z = event.magnetic.z;
-  
-  if (y > 0){
-    MAG_READING = 90 -  (atan(x/y))*180/PI;
-  }
-  else if (y<0){
-    MAG_READING = 270 -  (atan(x/y))*180/PI;
-  }
-  else if (y==0 && x<0){
-    MAG_READING = 180.0;
-  }
-  else if (y==0 && x>0){
-    MAG_READING = 0.0;
-  }
-  Serial.print((String) "Compass Result: " + MAG_READING);
-  Serial.print("\n ------------------------ \n");
-
-  /* Delay before the next sample */
-//  delay(500);
 
   /* ACCEL TEST --------------------------------------------------------------------*/
-  accel.getEvent(&event);
+//  sensors_event_t event1;
+//  accel.getEvent(&event1);
+//
+//  /* Display the results (acceleration is measured in m/s^2) */
+//  Serial.print("X: ");
+//  Serial.print(event1.acceleration.x);
+//  Serial.print("  ");
+//  Serial.print("Y: ");
+//  Serial.print(event1.acceleration.y);
+//  Serial.print("  ");
+//  Serial.print("Z: ");
+//  Serial.print(event1.acceleration.z);
+//  Serial.print("  ");
+//  Serial.println("m/s^2");
+//
+//  double ACCEL_READING[3] = {event1.acceleration.x, event1.acceleration.y, event1.acceleration.z};
+double ACCEL_READING[3];
+read_accelerometer(ACCEL_READING);
+double MAG_READING = read_magnetometer();
 
-  /* Display the results (acceleration is measured in m/s^2) */
-  Serial.print("X: ");
-  Serial.print(event.acceleration.x);
-  Serial.print("  ");
-  Serial.print("Y: ");
-  Serial.print(event.acceleration.y);
-  Serial.print("  ");
-  Serial.print("Z: ");
-  Serial.print(event.acceleration.z);
-  Serial.print("  ");
-  Serial.println("m/s^2");
-
-  double ACCEL_READING[3] = {event.acceleration.x, event.acceleration.y, event.acceleration.z};
-  /* Delay before the next sample */
-//  delay(500);
 //========================================================
 //Read Light Level with indicator LED color channels 
 // Modfied from  //https://playground.arduino.cc/Learning/LEDSensor  I added PIND for speed
@@ -535,8 +510,8 @@ if (preSDsaveBatterycheck < (systemShutdownVoltage+safetyMargin4SDsave+50)) {  /
 //    file.print(",");   
     file.print(analogPinReading); 
     file.print(",");   
-    file.print(MAG_READING); 
-    file.print(",");   
+//    file.print(MAG_READING); 
+//    file.print(",");   
     for (int i = 0; i <3; i++){
       file.print(ACCEL_READING[i]);
       file.print(",");
@@ -912,6 +887,58 @@ recent = newest;
 newest = analogRead(A0);
 */
 
+//================================================================================================
+//  SENSOR READING FUNCTIONS
+//================================================================================================
+double read_magnetometer(){
+  /* Get a new sensor event */
+  sensors_event_t event;
+  mag.getEvent(&event);
+
+  /* Display the results (magnetic vector values are in micro-Tesla (uT)) */
+  /* Get compass measurements */
+  double res = 0.0;
+  double x = event.magnetic.x, y = event.magnetic.y, z = event.magnetic.z;
+  
+  if (y > 0){
+    res = 90 -  (atan(x/y))*180/PI;
+  }
+  else if (y<0){
+    res = 270 -  (atan(x/y))*180/PI;
+  }
+  else if (y==0 && x<0){
+    res = 180.0;
+  }
+  else if (y==0 && x>0){
+    res = 0.0;
+  }
+  
+  Serial.print((String) "Compass Result: " + res);
+  Serial.print("\n ------------------------ \n");
+
+  return res;
+}
+
+double read_accelerometer(double *ACCEL_READING){
+  sensors_event_t event1;
+  accel.getEvent(&event1);
+
+  /* Display the results (acceleration is measured in m/s^2) */
+  Serial.print("X: ");
+  Serial.print(event1.acceleration.x);
+  Serial.print("  ");
+  Serial.print("Y: ");
+  Serial.print(event1.acceleration.y);
+  Serial.print("  ");
+  Serial.print("Z: ");
+  Serial.print(event1.acceleration.z);
+  Serial.print("  ");
+  Serial.println("m/s^2");
+
+  ACCEL_READING[0] = event1.acceleration.x;
+  ACCEL_READING[1] = event1.acceleration.y;
+  ACCEL_READING[2] = event1.acceleration.z;
+}
 //================================================================================================
 // NOTE: for more complex signal filtering, look into the digitalSmooth function with outlier rejection
 // by Paul Badger at  http://playground.arduino.cc/Main/DigitalSmooth  works well with acclerometers, etc
