@@ -14,7 +14,11 @@
 * Make sure the data logger is connected properly (see Debugging notes below)
 * Go back to the saveToSd file and press "upload" to upload the script to the Arduino
 * Go to Tools > Serial Monitor to view the console output
-
+* If you change any code and you want to push it to github, open up Command Prompt and do the following:
+  * `cd Documents/reeferees`
+  * `git add .`
+  * `git commit -m "some message"`
+  * `git push`
 ## Debugging notes
 * Port is Com 5
 * Order is brown-left, blue-right with the ProMini facing closest to you
