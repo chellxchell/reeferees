@@ -939,6 +939,29 @@ double read_accelerometer(double *ACCEL_READING){
   ACCEL_READING[1] = event1.acceleration.y;
   ACCEL_READING[2] = event1.acceleration.z;
 }
+
+double calculate_velocity(double *ACCEL_READING){
+  // set constants
+  const int rho = 1000; // (water density) ρ = 1000 kg/m3.
+  const double Cd = 0; // (drag coefficient) figure this out later
+  const double A = 0; // (cross section) figure this out later
+  const double m = 0;
+  const double g = 9.81;
+  const double ACCEL_0[3] = {0, 9.81, 0}; // a0 acceleration vector (hanging sensor)
+  const double k = sqrt((rho*Cd*A)/(2*m*g));
+
+  // calculate theta
+  double a_numer = ACCEL_READING[0]*ACCEL_0[0] + ACCEL_READING[1]*ACCEL_0[1] + ACCEL_READING[2]*ACCEL_0[2];
+  double a_denom_reading = sqrt(pow(ACCEL_READING[0],2) + pow(ACCEL_READING[1],2) + pow(ACCEL_READING[2],2));
+  double a_denom_0 = sqrt(pow(ACCEL_0[0],2) + pow(ACCEL_0[1],2) + pow(ACCEL_0[2],2));
+  double a_term = a_numer / (a_denom_reading * a_denom_0);
+  double theta = acos(a_term);
+
+  // calculate v
+  double v = k * sqrt(tan(theta));
+
+  return v;
+}
 //================================================================================================
 // NOTE: for more complex signal filtering, look into the digitalSmooth function with outlier rejection
 // by Paul Badger at  http://playground.arduino.cc/Main/DigitalSmooth  works well with acclerometers, etc
