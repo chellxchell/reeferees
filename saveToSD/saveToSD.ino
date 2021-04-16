@@ -24,7 +24,7 @@
 //============ CONFIGURATION SETTINGS =============================
 //change the text inside the brackets here to suit your configuration
 const char deploymentDetails[] PROGMEM = "Reeferees Logger #1,magnetometer and accelerometer used as sensor,1134880L constant,UTC time set,if found contact: yourname@email.edu"; 
-const char dataCollumnLabels[] PROGMEM = "TimeStamp,Battery(mV),SDsaveDelta(mV),Mag Reading (deg),Accel_X Reading (m/s^2),Accel_Y Reading (m/s^2),Accel_Z Reading (m/s^2), RedLED,GreenLED,BlueLED"; //collumn header labels for your data
+const char dataCollumnLabels[] PROGMEM = "TimeStamp,Battery(mV),SDsaveDelta(mV),Mag Reading (deg),Velocity (m/s),Accel_X Reading (m/s^2),Accel_Y Reading (m/s^2),Accel_Z Reading (m/s^2), RedLED,GreenLED,BlueLED"; //collumn header labels for your data
 //more info on the PROGMEM modifier @ http://www.gammon.com.au/progmem
 
 #define SampleIntervalMinutes 1  // Options: 1,2,3,4,5,6,10,12,15,20,30 ONLY (must be a divisor of 60)
@@ -431,27 +431,12 @@ analogPinReading = analogRead(analogInputPin);
 //#endif
 //digitalWrite(GREEN_PIN, LOW);
 
-
-  /* ACCEL TEST --------------------------------------------------------------------*/
-//  sensors_event_t event1;
-//  accel.getEvent(&event1);
-//
-//  /* Display the results (acceleration is measured in m/s^2) */
-//  Serial.print("X: ");
-//  Serial.print(event1.acceleration.x);
-//  Serial.print("  ");
-//  Serial.print("Y: ");
-//  Serial.print(event1.acceleration.y);
-//  Serial.print("  ");
-//  Serial.print("Z: ");
-//  Serial.print(event1.acceleration.z);
-//  Serial.print("  ");
-//  Serial.println("m/s^2");
-//
 //  double ACCEL_READING[3] = {event1.acceleration.x, event1.acceleration.y, event1.acceleration.z};
 double ACCEL_READING[3];
 read_accelerometer(ACCEL_READING);
 double MAG_READING = read_magnetometer();
+double VELOCITY = calculate_velocity(ACCEL_READING);
+Serial.print("\n ------------------------ \n");
 
 //========================================================
 //Read Light Level with indicator LED color channels 
@@ -508,10 +493,12 @@ if (preSDsaveBatterycheck < (systemShutdownVoltage+safetyMargin4SDsave+50)) {  /
     file.print(",");  
 //    file.print(rtc_TEMP_degC); 
 //    file.print(",");   
-    file.print(analogPinReading); 
-    file.print(",");   
-//    file.print(MAG_READING); 
+//    file.print(analogPinReading); 
 //    file.print(",");   
+    file.print(MAG_READING); 
+    file.print(",");   
+    file.print(VELOCITY); 
+    file.print(",");   
     for (int i = 0; i <3; i++){
       file.print(ACCEL_READING[i]);
       file.print(",");
@@ -912,10 +899,11 @@ double read_magnetometer(){
   else if (y==0 && x>0){
     res = 0.0;
   }
-  
-  Serial.print((String) "Compass Result: " + res);
-  Serial.print("\n ------------------------ \n");
 
+  Serial.print((String) "Raw X: " + event.magnetic.x + "\n");
+  Serial.print((String) "Raw Y: " + event.magnetic.y + "\n");
+  Serial.print((String) "Raw Z: " + event.magnetic.z + "\n");
+  Serial.print((String) "Compass Result: " + res + "\n");
   return res;
 }
 
@@ -942,12 +930,12 @@ double read_accelerometer(double *ACCEL_READING){
 
 double calculate_velocity(double *ACCEL_READING){
   // set constants
-  const int rho = 1000; // (water density) ρ = 1000 kg/m3.
-  const double Cd = 0; // (drag coefficient) figure this out later
-  const double A = 0; // (cross section) figure this out later
-  const double m = 0;
+  const double rho = 997.0; // (water density) ρ = 997 kg/m3.
+  const double Cd = 1.0; // CHANGE THIS (drag coefficient
+  const double A = 1.5; // CHANGE THIS (cross section)
+  const double m = 0.5; // CHANGE THIS (mass)
   const double g = 9.81;
-  const double ACCEL_0[3] = {0, 9.81, 0}; // a0 acceleration vector (hanging sensor)
+  const double ACCEL_0[3] = {0.0, 9.81, 0.0}; // a0 acceleration vector (hanging sensor)
   const double k = sqrt((rho*Cd*A)/(2*m*g));
 
   // calculate theta
@@ -956,11 +944,37 @@ double calculate_velocity(double *ACCEL_READING){
   double a_denom_0 = sqrt(pow(ACCEL_0[0],2) + pow(ACCEL_0[1],2) + pow(ACCEL_0[2],2));
   double a_term = a_numer / (a_denom_reading * a_denom_0);
   double theta = acos(a_term);
-
+  Serial.print("---");
+  Serial.print("a_numer: ");
+  Serial.print(a_numer);
+  Serial.print("\n");
+  Serial.print("denom_reading: ");
+  Serial.print(a_denom_reading);
+  Serial.print("\n");
+  Serial.print("denom0: ");
+  Serial.print(a_denom_0);
+  Serial.print("\n");
+  Serial.print("aterm: ");
+  Serial.print(a_term);
+  Serial.print("\n");
+  Serial.print("theta: ");
+  Serial.print(theta);
+  Serial.print("\n");
+  
   // calculate v
-  double v = k * sqrt(tan(theta));
-
+  double v = k * sqrt(abs(tan(theta)));
+  Serial.print("Velocity: ");
+  Serial.print(v);
+  Serial.print("\n");
   return v;
+}
+
+// unit conversion functions
+double inchesToMeters(double in){
+  return (in / 39.37);
+}
+double gramsToKg(double grams){
+  return (grams / 1000);
 }
 //================================================================================================
 // NOTE: for more complex signal filtering, look into the digitalSmooth function with outlier rejection
