@@ -24,7 +24,7 @@
 //============ CONFIGURATION SETTINGS =============================
 //change the text inside the brackets here to suit your configuration
 const char deploymentDetails[] PROGMEM = "Reeferees Logger #1,magnetometer and accelerometer used as sensor,1134880L constant,UTC time set,if found contact: yourname@email.edu"; 
-const char dataCollumnLabels[] PROGMEM = "TimeStamp,Battery(mV),SDsaveDelta(mV),Mag Reading (deg),Velocity (m/s),Accel_X Reading (m/s^2),Accel_Y Reading (m/s^2),Accel_Z Reading (m/s^2), RedLED,GreenLED,BlueLED"; //collumn header labels for your data
+const char dataCollumnLabels[] PROGMEM = "TimeStamp,Battery(mV),SDsaveDelta(mV),Compass Reading (deg),Velocity (m/s),Raw Accel_X Reading (m/s^2),Raw Accel_Y Reading (m/s^2),Raw Accel_Z Reading (m/s^2), Raw Mag_X Reading (microT), Raw Mag_Y Reading (microT), Raw Mag_Z Reading (microT)"; //column header labels for your data
 //more info on the PROGMEM modifier @ http://www.gammon.com.au/progmem
 
 #define SampleIntervalMinutes 1  // Options: 1,2,3,4,5,6,10,12,15,20,30 ONLY (must be a divisor of 60)
@@ -448,7 +448,8 @@ double ACCEL_READING[3];
 read_accelerometer(ACCEL_READING);
 double VELOCITY = calculate_velocity(ACCEL_READING);
 
-double MAG_READING = read_magnetometer();
+double MAG_READING[3];
+double DIRECTION = read_magnetometer(MAG_READING);
 Serial.print("\n ------------------------ \n");
 
 //========================================================
@@ -508,7 +509,7 @@ if (preSDsaveBatterycheck < (systemShutdownVoltage+safetyMargin4SDsave+50)) {  /
 //    file.print(",");   
 //    file.print(analogPinReading); 
 //    file.print(",");   
-    file.print(MAG_READING); 
+    file.print(DIRECTION); 
     file.print(",");   
     file.print(VELOCITY); 
     file.print(",");   
@@ -516,6 +517,10 @@ if (preSDsaveBatterycheck < (systemShutdownVoltage+safetyMargin4SDsave+50)) {  /
       file.print(ACCEL_READING[i]);
       file.print(",");
     } 
+    for (int j = 0; j <3; j++){
+      file.print(MAG_READING[j]);
+      file.print(",");
+    }
     
 //#ifdef TS_DS18B20
 //    file.print(ds18b20_TEMP_Raw);
@@ -890,7 +895,7 @@ newest = analogRead(A0);
 //================================================================================================
 //  SENSOR READING FUNCTIONS
 //================================================================================================
-double read_magnetometer(){
+double read_magnetometer(double *MAG_READING){
   /* Get a new sensor event */
   sensors_event_t event;
   mag.getEvent(&event);
@@ -901,24 +906,30 @@ double read_magnetometer(){
   double x = event.magnetic.x, y = event.magnetic.y, z = event.magnetic.z;
   
   if (y > 0){
-    res = 90 -  (atan(x/y))*180/PI;
+    res = 270 + (atan(x/y))*180/PI;
   }
-  else if (y<0){
-    res = 270 -  (atan(x/y))*180/PI;
+  else if (y < 0){
+    res = 90 + (atan(x/y))*180/PI;
   }
-  else if (y==0 && x<0){
+  else if (y == 0 && x < 0){
     res = 180.0;
   }
-  else if (y==0 && x>0){
+  else if (y == 0 && x > 0){
     res = 0.0;
   }
 
+  MAG_READING[0] = event.magnetic.x;
+  MAG_READING[1] = event.magnetic.y;
+  MAG_READING[2] = event.magnetic.z;
+  
   Serial.print((String) "Mag Raw X: " + event.magnetic.x + "  ");
   Serial.print((String) "Mag Raw Y: " + event.magnetic.y + "  ");
   Serial.print((String) "Mag Raw Z: " + event.magnetic.z + "\n");
   Serial.print((String) "Compass Result: " + res + "\n");
   return res;
 }
+
+//-------------------------
 
 double read_accelerometer(double *ACCEL_READING){
   sensors_event_t event1;
@@ -941,13 +952,13 @@ double read_accelerometer(double *ACCEL_READING){
   ACCEL_READING[2] = event1.acceleration.z;
 }
 
+// calculates velocity based on accelerometer reading
 double calculate_velocity(double *ACCEL_READING){
   // set constants
-//  const double rho = 997.0; // (water density) ρ = 997 kg/m3.
-  const double rho = 1.2041; // (air density) 
-
-  const double Cd = 1.0; // CHANGE THIS (drag coefficient
-  const double A = 1.5; // CHANGE THIS (cross section)
+  //  const double rho = 997.0; // (water density, kg/m3) ρ = 997 kg/m3.
+  const double rho = 1.2041; // (air density for testing, kg/m3) 
+  const double Cd = 2.1; // (drag coefficient, no units)
+  const double A = inchesToMeters(7.875); // (cross section, meters)
   const double m = 0.5; // CHANGE THIS (mass)
   const double g = 9.81;
   const double ACCEL_0[3] = {0.0, 9.81, 0.0}; // a0 acceleration vector (hanging sensor)
@@ -959,22 +970,6 @@ double calculate_velocity(double *ACCEL_READING){
   double a_denom_0 = sqrt(pow(ACCEL_0[0],2) + pow(ACCEL_0[1],2) + pow(ACCEL_0[2],2));
   double a_term = a_numer / (a_denom_reading * a_denom_0);
   double theta = acos(a_term);
-//  Serial.print("---");
-//  Serial.print("a_numer: ");
-//  Serial.print(a_numer);
-//  Serial.print("\n");
-//  Serial.print("denom_reading: ");
-//  Serial.print(a_denom_reading);
-//  Serial.print("\n");
-//  Serial.print("denom0: ");
-//  Serial.print(a_denom_0);
-//  Serial.print("\n");
-//  Serial.print("aterm: ");
-//  Serial.print(a_term);
-//  Serial.print("\n");
-//  Serial.print("theta: ");
-//  Serial.print(theta);
-//  Serial.print("\n");
   
   // calculate v
   double v = k * sqrt(abs(tan(theta)));
@@ -983,6 +978,8 @@ double calculate_velocity(double *ACCEL_READING){
   Serial.print("\n");
   return v;
 }
+
+//-------------------------
 
 // unit conversion functions
 double inchesToMeters(double in){
