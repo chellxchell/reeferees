@@ -955,13 +955,13 @@ double read_accelerometer(double *ACCEL_READING){
 // calculates velocity based on accelerometer reading
 double calculate_velocity(double *ACCEL_READING){
   // set constants
-  //  const double rho = 997.0; // (water density, kg/m3) ρ = 997 kg/m3.
-  const double rho = 1.2041; // (air density for testing, kg/m3) 
-  const double Cd = 2.1; // (drag coefficient, no units)
+  const double rho = 997.0; // (water density, kg/m3) ρ = 997 kg/m3.
+//  const double rho = 1.2041; // (air density for testing, kg/m3) 
+  const double Cd = 1.15; // (drag coefficient, no units)
   const double A = inchesToMeters(7.875); // (cross section, meters)
   const double m = 0.5; // CHANGE THIS (mass)
   const double g = 9.81;
-  const double ACCEL_0[3] = {0.0, 9.81, 0.0}; // a0 acceleration vector (hanging sensor)
+  const double ACCEL_0[3] = {g, 0.08, 0.46}; // a0 acceleration vector (hanging sensor)
   const double k = sqrt((rho*Cd*A)/(2*m*g));
 
   // calculate theta
