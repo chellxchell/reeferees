@@ -24,7 +24,7 @@
 //============ CONFIGURATION SETTINGS =============================
 //change the text inside the brackets here to suit your configuration
 const char deploymentDetails[] PROGMEM = "Reeferees Logger #1,magnetometer and accelerometer used as sensor,1134880L constant,UTC time set,if found contact: yourname@email.edu"; 
-const char dataCollumnLabels[] PROGMEM = "TimeStamp,Battery(mV),SDsaveDelta(mV),Compass Reading (deg),Velocity (m/s),Raw Accel_X Reading (m/s^2),Raw Accel_Y Reading (m/s^2),Raw Accel_Z Reading (m/s^2), Raw Mag_X Reading (microT), Raw Mag_Y Reading (microT), Raw Mag_Z Reading (microT)"; //column header labels for your data
+const char dataCollumnLabels[] PROGMEM = "TimeStamp,Battery(mV),SDsaveDelta(mV),Compass Reading (deg),Tilt Angle,Raw Accel_X Reading (m/s^2),Raw Accel_Y Reading (m/s^2),Raw Accel_Z Reading (m/s^2), Raw Mag_X Reading (microT), Raw Mag_Y Reading (microT), Raw Mag_Z Reading (microT)"; //column header labels for your data
 //more info on the PROGMEM modifier @ http://www.gammon.com.au/progmem
 
 #define SampleIntervalMinutes 1  // Options: 1,2,3,4,5,6,10,12,15,20,30 ONLY (must be a divisor of 60)
@@ -446,7 +446,7 @@ analogPinReading = analogRead(analogInputPin);
 
 double ACCEL_READING[3];
 read_accelerometer(ACCEL_READING);
-double VELOCITY = calculate_velocity(ACCEL_READING);
+double TILT_ANGLE = calculate_tilt_angle(ACCEL_READING);
 
 double MAG_READING[3];
 double DIRECTION = read_magnetometer(MAG_READING);
@@ -511,7 +511,7 @@ if (preSDsaveBatterycheck < (systemShutdownVoltage+safetyMargin4SDsave+50)) {  /
 //    file.print(",");   
     file.print(DIRECTION); 
     file.print(",");   
-    file.print(VELOCITY); 
+    file.print(TILT_ANGLE); 
     file.print(",");   
     for (int i = 0; i <3; i++){
       file.print(ACCEL_READING[i]);
@@ -905,17 +905,19 @@ double read_magnetometer(double *MAG_READING){
   double res = 0.0;
   double x = event.magnetic.x, y = event.magnetic.y, z = event.magnetic.z;
   
-  if (y > 0){
-    res = 270 + (atan(x/y))*180/PI;
+  if (z > 0){
+    res = 180 + (atan(y/z))*180/PI;
   }
-  else if (y < 0){
-    res = 90 + (atan(x/y))*180/PI;
+  else if (z < 0){
+    if (y > 0){
+      res = (atan(y/abs(z)))*180/PI - 360;
+    }
+    if (y < 0){
+      res = (atan(y/abs(z)))*180/PI;
+    }
   }
-  else if (y == 0 && x < 0){
-    res = 180.0;
-  }
-  else if (y == 0 && x > 0){
-    res = 0.0;
+  else{
+    Serial.print("No current");
   }
 
   MAG_READING[0] = event.magnetic.x;
@@ -928,6 +930,13 @@ double read_magnetometer(double *MAG_READING){
   Serial.print((String) "Compass Result: " + res + "\n");
   return res;
 }
+
+
+
+
+
+
+
 
 //-------------------------
 
@@ -952,8 +961,9 @@ double read_accelerometer(double *ACCEL_READING){
   ACCEL_READING[2] = event1.acceleration.z;
 }
 
-// calculates velocity based on accelerometer reading
-double calculate_velocity(double *ACCEL_READING){
+
+// calculates tilt angle based on accelerometer reading
+double calculate_tilt_angle(double *ACCEL_READING){
   // set constants
   const double rho = 997.0; // (water density, kg/m3) ρ = 997 kg/m3.
 //  const double rho = 1.2041; // (air density for testing, kg/m3) 
@@ -961,7 +971,7 @@ double calculate_velocity(double *ACCEL_READING){
   const double A = inchesToMeters(7.875); // (cross section, meters)
   const double m = 0.5; // CHANGE THIS (mass)
   const double g = 9.81;
-  const double ACCEL_0[3] = {g, 0.08, 0.46}; // a0 acceleration vector (hanging sensor)
+  const double ACCEL_0[3] = {g, 0.54, 0.46}; // a0 acceleration vector (hanging sensor)
   const double k = sqrt((rho*Cd*A)/(2*m*g));
 
   // calculate theta
@@ -971,12 +981,10 @@ double calculate_velocity(double *ACCEL_READING){
   double a_term = a_numer / (a_denom_reading * a_denom_0);
   double theta = acos(a_term);
   
-  // calculate v
-  double v = k * sqrt(abs(tan(theta)));
-  Serial.print("Velocity: ");
-  Serial.print(v);
+  Serial.print("Theta: ");
+  Serial.print(theta*180/PI);
   Serial.print("\n");
-  return v;
+  return theta*180/PI;
 }
 
 //-------------------------
