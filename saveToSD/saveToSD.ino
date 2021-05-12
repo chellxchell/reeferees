@@ -444,12 +444,58 @@ analogPinReading = analogRead(analogInputPin);
 //#endif
 //digitalWrite(GREEN_PIN, LOW);
 
-double ACCEL_READING[3];
-read_accelerometer(ACCEL_READING);
-double TILT_ANGLE = calculate_tilt_angle(ACCEL_READING);
+//int ROUNDS = 3;
+//double AVG_ACCEL_READING[3] = {0.0, 0.0, 0.0};
+//double AVG_MAG_READING[3] = {0.0, 0.0, 0.0};
+//char print_letters[3] = {'x', 'y', 'z'};
+ double avg_accel_x = 0.0, avg_accel_y = 0.0, avg_accel_z = 0.0;
+ double avg_mag_x = 0.0, avg_mag_y = 0.0, avg_mag_z = 0.0;
 
-double MAG_READING[3];
-double DIRECTION = read_magnetometer(MAG_READING);
+for (int i = 0; i < 9; i++) {
+  double ACCEL_READING[3];
+  double MAG_READING[3];
+  read_accelerometer(ACCEL_READING);
+  read_magnetometer(MAG_READING);
+
+  avg_accel_x += ACCEL_READING[0];
+  avg_accel_y += ACCEL_READING[1];
+  avg_accel_z += ACCEL_READING[2];
+
+  avg_mag_x += MAG_READING[0];
+  avg_mag_y += MAG_READING[1];
+  avg_mag_z += MAG_READING[2];
+
+//  Serial.print(String("Accel Reading #" + i) +  String(ACCEL_READING[0]));
+//  Serial.print(String("Accel Reading #" + i) +  String(ACCEL_READING[1]));
+//  Serial.print(String("Accel Reading #" + i) +  String(ACCEL_READING[2]) + "\n");
+  Serial.print(String("Mag Reading #" + i) +  String(MAG_READING[0]) + "\n");
+//  Serial.print(String("Mag Reading #" + i) +  String(MAG_READING[1]));
+//  Serial.print(String("Mag Reading #" + i) +  String(MAG_READING[2]) + "\n");
+//  for (int j = 0; j < 3; j++){
+//    Serial.print(String("Accel Reading #" + i) +  String(ACCEL_READING[j]) + "\n");
+//    Serial.print(String("Mag Reading #" + i) +  String(MAG_READING[j]) + "\n");
+//
+//    AVG_ACCEL_READING[j] += ACCEL_READING[j];
+//    AVG_MAG_READING[j] += MAG_READING[j];
+//  }
+  delay(1000);
+}
+double AVG_ACCEL_READING[3] = {avg_accel_x / 9, avg_accel_y / 9, avg_accel_z / 9};
+double AVG_MAG_READING[3] = {avg_mag_x / 9, avg_mag_y / 9, avg_mag_z / 9};
+//for (int k = 0; k < 3; k++){
+//  AVG_ACCEL_READING[k] /= 9;
+//  AVG_MAG_READING[k] /= 9;
+//}
+
+double TILT_ANGLE = calculate_tilt_angle(AVG_ACCEL_READING);
+double DIRECTION = calculate_direction(AVG_MAG_READING);
+
+//double ACCEL_READING[3];
+//read_accelerometer(ACCEL_READING);
+//double TILT_ANGLE = calculate_tilt_angle(ACCEL_READING);
+//
+//double MAG_READING[3];
+//double DIRECTION = read_magnetometer(MAG_READING);
 Serial.print("\n ------------------------ \n");
 
 //========================================================
@@ -514,11 +560,11 @@ if (preSDsaveBatterycheck < (systemShutdownVoltage+safetyMargin4SDsave+50)) {  /
     file.print(TILT_ANGLE); 
     file.print(",");   
     for (int i = 0; i <3; i++){
-      file.print(ACCEL_READING[i]);
+      file.print(AVG_ACCEL_READING[i]);
       file.print(",");
     } 
     for (int j = 0; j <3; j++){
-      file.print(MAG_READING[j]);
+      file.print(AVG_MAG_READING[j]);
       file.print(",");
     }
     
@@ -902,8 +948,19 @@ double read_magnetometer(double *MAG_READING){
 
   /* Display the results (magnetic vector values are in micro-Tesla (uT)) */
   /* Get compass measurements */
+  MAG_READING[0] = event.magnetic.x;
+  MAG_READING[1] = event.magnetic.y;
+  MAG_READING[2] = event.magnetic.z;
+  
+  Serial.print((String) "Mag Raw X: " + event.magnetic.x + "  ");
+  Serial.print((String) "Mag Raw Y: " + event.magnetic.y + "  ");
+  Serial.print((String) "Mag Raw Z: " + event.magnetic.z + "\n");
+  
+}
+
+double calculate_direction(double *MAG_READING){
   double res = 0.0;
-  double x = event.magnetic.x, y = event.magnetic.y, z = event.magnetic.z;
+  double x = MAG_READING[0], y = MAG_READING[1], z = MAG_READING[2];
   
   if (z > 0){
     res = 180 + (atan(y/z))*180/PI;
@@ -919,22 +976,9 @@ double read_magnetometer(double *MAG_READING){
   else{
     Serial.print("No current");
   }
-
-  MAG_READING[0] = event.magnetic.x;
-  MAG_READING[1] = event.magnetic.y;
-  MAG_READING[2] = event.magnetic.z;
-  
-  Serial.print((String) "Mag Raw X: " + event.magnetic.x + "  ");
-  Serial.print((String) "Mag Raw Y: " + event.magnetic.y + "  ");
-  Serial.print((String) "Mag Raw Z: " + event.magnetic.z + "\n");
   Serial.print((String) "Compass Result: " + res + "\n");
   return res;
 }
-
-
-
-
-
 
 
 
