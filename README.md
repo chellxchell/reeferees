@@ -11,6 +11,7 @@
   * https://github.com/greiman/SdFat
 * Once you have each zip file, unzip it. This can be done by right-clicking the zip file in the Downloads folder and clicking "Extract All"
 * Move all three unzipped folders into Documents > Arduino > Libraries
+* Make sure the unzipped folders are named "RTClib" and "LowPower" and "SdFat" (case-sensitive and symbol-sensitive). If they're not named exactly this an error will occur.
 * Make sure the data logger is connected properly (see Debugging notes below)
 * Go back to the saveToSd file and press "upload" to upload the script to the Arduino
 * Go to Tools > Serial Monitor to view the console output
