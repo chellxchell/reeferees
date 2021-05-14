@@ -19,6 +19,7 @@
   * `git add .`
   * `git commit -m "some message"`
   * `git push`
+* If you want to revert to the state of the code before we added the '9 times' thing, while you're in Documents/reeferees, type: `git reset --hard 0230b8baa7968b64f8ac74348096e87ac593e138`. While you are in this state, DO NOT CHANGE ANYTHING because it'll mess up the version control and won't save it. If you want to change anything, revert to the '9 times' state. If you are in the 'not 9 times' state and want to revert back to the '9 times' state, type `git pull`.
 ## Debugging notes
 * Port is Com 5
 * Order is brown-left, blue-right with the ProMini facing closest to you
