@@ -991,7 +991,7 @@ double read_accelerometer(double *ACCEL_READING){
 double calculate_tilt_angle(double *ACCEL_READING){
   // set constants
   const double g = 9.81;
-  const double ACCEL_0[3] = {-g, 0.54, 0.46}; // a0 acceleration vector (hanging sensor)
+  const double ACCEL_0[3] = {g, 0.54, 0.46}; // a0 acceleration vector (hanging sensor)
 
   // calculate theta
   double a_numer = ACCEL_READING[0]*ACCEL_0[0] + ACCEL_READING[1]*ACCEL_0[1] + ACCEL_READING[2]*ACCEL_0[2];
