@@ -444,9 +444,12 @@ analogPinReading = analogRead(analogInputPin);
 //#endif
 //digitalWrite(GREEN_PIN, LOW);
 
-// horrible written to save space
-double avg_accel_x = 0.0, avg_accel_y = 0.0, avg_accel_z = 0.0;
-double avg_mag_x = 0.0, avg_mag_y = 0.0, avg_mag_z = 0.0;
+//int ROUNDS = 3;
+//double AVG_ACCEL_READING[3] = {0.0, 0.0, 0.0};
+//double AVG_MAG_READING[3] = {0.0, 0.0, 0.0};
+//char print_letters[3] = {'x', 'y', 'z'};
+ double avg_accel_x = 0.0, avg_accel_y = 0.0, avg_accel_z = 0.0;
+ double avg_mag_x = 0.0, avg_mag_y = 0.0, avg_mag_z = 0.0;
 
 for (int i = 0; i < 9; i++) {
   double ACCEL_READING[3];
@@ -461,12 +464,28 @@ for (int i = 0; i < 9; i++) {
   avg_mag_x += MAG_READING[0];
   avg_mag_y += MAG_READING[1];
   avg_mag_z += MAG_READING[2];
+
+//  Serial.print(String("Accel Reading #" + i) +  String(ACCEL_READING[0]));
+//  Serial.print(String("Accel Reading #" + i) +  String(ACCEL_READING[1]));
+//  Serial.print(String("Accel Reading #" + i) +  String(ACCEL_READING[2]) + "\n");
+  Serial.print(String("Mag Reading #" + i) +  String(MAG_READING[0]) + "\n");
+//  Serial.print(String("Mag Reading #" + i) +  String(MAG_READING[1]));
+//  Serial.print(String("Mag Reading #" + i) +  String(MAG_READING[2]) + "\n");
+//  for (int j = 0; j < 3; j++){
+//    Serial.print(String("Accel Reading #" + i) +  String(ACCEL_READING[j]) + "\n");
+//    Serial.print(String("Mag Reading #" + i) +  String(MAG_READING[j]) + "\n");
+//
+//    AVG_ACCEL_READING[j] += ACCEL_READING[j];
+//    AVG_MAG_READING[j] += MAG_READING[j];
+//  }
   delay(1000);
 }
-
-// find the average for each set of readings
 double AVG_ACCEL_READING[3] = {avg_accel_x / 9, avg_accel_y / 9, avg_accel_z / 9};
 double AVG_MAG_READING[3] = {avg_mag_x / 9, avg_mag_y / 9, avg_mag_z / 9};
+//for (int k = 0; k < 3; k++){
+//  AVG_ACCEL_READING[k] /= 9;
+//  AVG_MAG_READING[k] /= 9;
+//}
 
 double TILT_ANGLE = calculate_tilt_angle(AVG_ACCEL_READING);
 double DIRECTION = calculate_direction(AVG_MAG_READING);
@@ -991,7 +1010,7 @@ double read_accelerometer(double *ACCEL_READING){
 double calculate_tilt_angle(double *ACCEL_READING){
   // set constants
   const double g = 9.81;
-  const double ACCEL_0[3] = {-g, 0.54, 0.46}; // a0 acceleration vector (hanging sensor)
+  const double ACCEL_0[3] = {g, 0.54, 0.46}; // a0 acceleration vector (hanging sensor)
 
   // calculate theta
   double a_numer = ACCEL_READING[0]*ACCEL_0[0] + ACCEL_READING[1]*ACCEL_0[1] + ACCEL_READING[2]*ACCEL_0[2];

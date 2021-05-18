@@ -196,14 +196,8 @@ void loop(void) {
 
 double calculate_tilt_angle(double *ACCEL_READING){
   // set constants
-  const double rho = 997.0; // (water density, kg/m3) ρ = 997 kg/m3.
-//  const double rho = 1.2041; // (air density for testing, kg/m3) 
-  const double Cd = 1.15; // (drag coefficient, no units)
-  const double A = inchesToMeters(7.875); // (cross section, meters)
-  const double m = 0.5; // CHANGE THIS (mass)
   const double g = 9.81;
-  const double ACCEL_0[3] = {g, 0.54, 0.46}; // a0 acceleration vector (hanging sensor)
-  const double k = sqrt((rho*Cd*A)/(2*m*g));
+  const double ACCEL_0[3] = {-g, 0.54, 0.46}; // a0 acceleration vector (hanging sensor)
 
   // calculate theta
   double a_numer = ACCEL_READING[0]*ACCEL_0[0] + ACCEL_READING[1]*ACCEL_0[1] + ACCEL_READING[2]*ACCEL_0[2];
