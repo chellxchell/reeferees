@@ -444,39 +444,16 @@ analogPinReading = analogRead(analogInputPin);
 //#endif
 //digitalWrite(GREEN_PIN, LOW);
 
-// horrible written to save space
-double avg_accel_x = 0.0, avg_accel_y = 0.0, avg_accel_z = 0.0;
-double avg_mag_x = 0.0, avg_mag_y = 0.0, avg_mag_z = 0.0;
 
-for (int i = 0; i < 9; i++) {
-  double ACCEL_READING[3];
-  double MAG_READING[3];
-  read_accelerometer(ACCEL_READING);
-  read_magnetometer(MAG_READING);
-
-  avg_accel_x += ACCEL_READING[0];
-  avg_accel_y += ACCEL_READING[1];
-  avg_accel_z += ACCEL_READING[2];
-
-  avg_mag_x += MAG_READING[0];
-  avg_mag_y += MAG_READING[1];
-  avg_mag_z += MAG_READING[2];
-  delay(1000);
-}
 
 // find the average for each set of readings
-double AVG_ACCEL_READING[3] = {avg_accel_x / 9, avg_accel_y / 9, avg_accel_z / 9};
-double AVG_MAG_READING[3] = {avg_mag_x / 9, avg_mag_y / 9, avg_mag_z / 9};
+double AVG_ACCEL_READING[3];
+double AVG_MAG_READING[3];
+
+loop_readings(AVG_ACCEL_READING, AVG_MAG_READING, 9);
 
 double TILT_ANGLE = calculate_tilt_angle(AVG_ACCEL_READING);
-double DIRECTION = calculate_direction(AVG_MAG_READING);
-
-//double ACCEL_READING[3];
-//read_accelerometer(ACCEL_READING);
-//double TILT_ANGLE = calculate_tilt_angle(ACCEL_READING);
-//
-//double MAG_READING[3];
-//double DIRECTION = read_magnetometer(MAG_READING);
+double DIRECTION = calculate_direction(AVG_MAG_READING, AVG_ACCEL_READING);
 Serial.print("\n ------------------------ \n");
 
 //========================================================
@@ -484,29 +461,29 @@ Serial.print("\n ------------------------ \n");
 // Modfied from  //https://playground.arduino.cc/Learning/LEDSensor  I added PIND for speed
 // An explaination of the reverse-bias LED reading technique https://www.sparkfun.com/news/2161
 // these logarithmic 'discharge time' readings get smaller as the amount of light increases
-
-#ifdef readRedLED 
-uint32_t redLEDreading=readRedLEDchannel(); //call the function which reads the RED led channel
-  #ifdef ECHO_TO_SERIAL
-   Serial.print(F("RedLED= "));Serial.print(redLEDreading);Serial.flush();
-  #endif
-#endif  //readRedLED 
-
-#ifdef readGreenLED 
-uint32_t greenLEDreading=readGreenLEDchannel(); //call the function which reads the RED led channel
-  #ifdef ECHO_TO_SERIAL
-   Serial.print(F("GreenLED= "));Serial.print(greenLEDreading);Serial.flush();
-  #endif
-#endif  //readGreenLED 
-
-#ifdef readBlueLED 
-uint32_t blueLEDreading=readBlueLEDchannel(); //call the function which reads the RED led channel
-  #ifdef ECHO_TO_SERIAL
-   Serial.print(F("BlueLED= "));Serial.print(blueLEDreading);Serial.flush();
-  #endif
-#endif  //readBlueLED 
- 
-pinMode(RED_PIN,INPUT_PULLUP); //indicate SD saving
+//
+//#ifdef readRedLED 
+//uint32_t redLEDreading=readRedLEDchannel(); //call the function which reads the RED led channel
+//  #ifdef ECHO_TO_SERIAL
+//   Serial.print(F("RedLED= "));Serial.print(redLEDreading);Serial.flush();
+//  #endif
+//#endif  //readRedLED 
+//
+//#ifdef readGreenLED 
+//uint32_t greenLEDreading=readGreenLEDchannel(); //call the function which reads the RED led channel
+//  #ifdef ECHO_TO_SERIAL
+//   Serial.print(F("GreenLED= "));Serial.print(greenLEDreading);Serial.flush();
+//  #endif
+//#endif  //readGreenLED 
+//
+//#ifdef readBlueLED 
+//uint32_t blueLEDreading=readBlueLEDchannel(); //call the function which reads the RED led channel
+//  #ifdef ECHO_TO_SERIAL
+//   Serial.print(F("BlueLED= "));Serial.print(blueLEDreading);Serial.flush();
+//  #endif
+//#endif  //readBlueLED 
+// 
+//pinMode(RED_PIN,INPUT_PULLUP); //indicate SD saving
   
 // ========== Pre SD saving battery checks ==========
 #if defined (unregulated2xLithiumAA) || defined(ECHO_TO_SERIAL) 
@@ -939,26 +916,41 @@ double read_magnetometer(double *MAG_READING){
   
 }
 
-double calculate_direction(double *MAG_READING){
-  double res = 0.0;
-  double x = MAG_READING[0], y = MAG_READING[1], z = MAG_READING[2];
-  
-  if (z > 0){
-    res = 180 + (atan(y/z))*180/PI;
+double calculate_direction(double *MAG_READING, double *ACCEL_READING){
+  // calculations for this function based on https://www.pololu.com/file/0J434/LSM303DLH-compass-app-note.pdf
+  double Mx = MAG_READING[0], My = MAG_READING[1], Mz = MAG_READING[2];
+  double Ax = ACCEL_READING[0], Ay = ACCEL_READING[1], Az = ACCEL_READING[2];
+
+  // equation 10
+  double rho = asin(-Ax);
+  double gamma = asin(Ay/cos(rho));
+
+  // equation 12
+  double mag_x = Mx*cos(rho) + Mz*sin(rho);
+  double mag_y = Mx*sin(gamma)*sin(rho) + My*cos(gamma) - Mz*sin(gamma)*cos(rho);
+  double mag_z = -Mx*cos(gamma)*sin(rho) + My*sin(gamma) + Mz*cos(gamma)*cos(rho);
+
+
+  double heading = 0.0;
+
+  // equation 13
+  if ((mag_x > 0) & (mag_y >= 0)){
+    heading = atan(mag_y / mag_x);
   }
-  else if (z < 0){
-    if (y > 0){
-      res = (atan(y/abs(z)))*180/PI - 360;
-    }
-    if (y < 0){
-      res = (atan(y/abs(z)))*180/PI;
-    }
+  else if (mag_x < 0){
+    heading = 180 + atan(mag_y / mag_x);
   }
-  else{
-    Serial.print("No current");
+  else if (mag_x > 0 & mag_y <= 0){
+    heading = 360 + atan(mag_y / mag_x);
   }
-  Serial.print((String) "Compass Result: " + res + "\n");
-  return res;
+  else if (mag_x == 0 & mag_y < 0){
+    heading = 90;
+  }
+  else if (mag_x == 0 & mag_y > 0){
+    heading = 270;
+  }
+
+  return heading;
 }
 
 
@@ -990,8 +982,8 @@ double read_accelerometer(double *ACCEL_READING){
 // calculates tilt angle based on accelerometer reading
 double calculate_tilt_angle(double *ACCEL_READING){
   // set constants
-  const double g = 9.81;
-  const double ACCEL_0[3] = {g, 0.54, 0.46}; // a0 acceleration vector (hanging sensor)
+  const double g = 9.216;
+  const double ACCEL_0[3] = {g, -0.133, 2.302}; // a0 acceleration vector (hanging sensor)
 
   // calculate theta
   double a_numer = ACCEL_READING[0]*ACCEL_0[0] + ACCEL_READING[1]*ACCEL_0[1] + ACCEL_READING[2]*ACCEL_0[2];
@@ -1006,6 +998,35 @@ double calculate_tilt_angle(double *ACCEL_READING){
   return theta*180/PI;
 }
 
+double loop_readings(double *AVG_ACCEL_READING, double *AVG_MAG_READING, int n){
+  // horrible written to save space
+  double avg_accel_x = 0.0, avg_accel_y = 0.0, avg_accel_z = 0.0;
+  double avg_mag_x = 0.0, avg_mag_y = 0.0, avg_mag_z = 0.0;
+  
+  for (int i = 0; i < n; i++) {
+    double ACCEL_READING[3];
+    double MAG_READING[3];
+    read_accelerometer(ACCEL_READING);
+    read_magnetometer(MAG_READING);
+  
+    avg_accel_x += ACCEL_READING[0];
+    avg_accel_y += ACCEL_READING[1];
+    avg_accel_z += ACCEL_READING[2];
+  
+    avg_mag_x += MAG_READING[0];
+    avg_mag_y += MAG_READING[1];
+    avg_mag_z += MAG_READING[2];
+    delay(1000);
+  }
+
+  AVG_ACCEL_READING[0] = avg_accel_x / n;
+  AVG_ACCEL_READING[1] = avg_accel_y / n;
+  AVG_ACCEL_READING[2] = avg_accel_z / n;
+  
+  AVG_MAG_READING[0] = avg_mag_x / n;
+  AVG_MAG_READING[1] =  avg_mag_y / n;
+  AVG_MAG_READING[2] = avg_mag_z / n;
+}
 //-------------------------
 
 // unit conversion functions
