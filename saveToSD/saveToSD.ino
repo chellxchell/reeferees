@@ -93,8 +93,8 @@ byte bytebuffer1 = 0;     // for functions that return a byte - usually comms wi
 byte bytebuffer2 = 0;     // second buffer for 16-bit sensor register readings
 int integerBuffer = 9999;    // for temp-swapping ADC readings
 float floatbuffer = 9999.9;  // for temporary float calculations
-#define analogInputPin A0    //for analog pin reading
-int analogPinReading = 0;
+//#define analogInputPin A0    //for analog pin reading
+//int analogPinReading = 0;
 
 //Sensor specific variables & defines:
 //====================================
@@ -272,42 +272,40 @@ bitSet (DIDR0, ADC3D);  // disable digital buffer on A3
     while (1)
       ;
   }
-  /* Display some basic information on this sensor */
-//  displayMagSensorDetails();
   
 //---------
-  accel.setRange(LSM303_RANGE_4G);
-  Serial.print("Range set to: ");
-  lsm303_accel_range_t new_range = accel.getRange();
-  switch (new_range) {
-  case LSM303_RANGE_2G:
-    Serial.println("+- 2G");
-    break;
-  case LSM303_RANGE_4G:
-    Serial.println("+- 4G");
-    break;
-  case LSM303_RANGE_8G:
-    Serial.println("+- 8G");
-    break;
-  case LSM303_RANGE_16G:
-    Serial.println("+- 16G");
-    break;
-  }
-
-  accel.setMode(LSM303_MODE_NORMAL);
-  Serial.print("Mode set to: ");
-  lsm303_accel_mode_t new_mode = accel.getMode();
-  switch (new_mode) {
-  case LSM303_MODE_NORMAL:
-    Serial.println("Normal");
-    break;
-  case LSM303_MODE_LOW_POWER:
-    Serial.println("Low Power");
-    break;
-  case LSM303_MODE_HIGH_RESOLUTION:
-    Serial.println("High Resolution");
-    break;
-  }
+//  accel.setRange(LSM303_RANGE_4G);
+//  Serial.print("Range set to: ");
+//  lsm303_accel_range_t new_range = accel.getRange();
+//  switch (new_range) {
+//  case LSM303_RANGE_2G:
+//    Serial.println("+- 2G");
+//    break;
+//  case LSM303_RANGE_4G:
+//    Serial.println("+- 4G");
+//    break;
+//  case LSM303_RANGE_8G:
+//    Serial.println("+- 8G");
+//    break;
+//  case LSM303_RANGE_16G:
+//    Serial.println("+- 16G");
+//    break;
+//  }
+//
+//  accel.setMode(LSM303_MODE_NORMAL);
+//  Serial.print("Mode set to: ");
+//  lsm303_accel_mode_t new_mode = accel.getMode();
+//  switch (new_mode) {
+//  case LSM303_MODE_NORMAL:
+//    Serial.println("Normal");
+//    break;
+//  case LSM303_MODE_LOW_POWER:
+//    Serial.println("Low Power");
+//    break;
+//  case LSM303_MODE_HIGH_RESOLUTION:
+//    Serial.println("High Resolution");
+//    break;
+//  }
 //#ifdef TS_DS18B20
 //  
 //  ds.search(addr);
@@ -421,11 +419,11 @@ pinMode(GREEN_PIN,INPUT_PULLUP); //green indicates sensor readings taking place
 LowPower.powerDown(SLEEP_30MS, ADC_OFF, BOD_ON); //optional delay here to make indicator pip more visible
 //============================================================
 // Read Analog Input
-analogReference(DEFAULT);analogRead(analogInputPin); //always throw away the first ADC reading
-delay(10);  //10msec delay gives Aref capacitor time to adjust
+//analogReference(DEFAULT);analogRead(analogInputPin); //always throw away the first ADC reading
+//delay(10);  //10msec delay gives Aref capacitor time to adjust
 
 //now you can do a single analog reading one time 
-analogPinReading = analogRead(analogInputPin);
+//analogPinReading = analogRead(analogInputPin);
 // OR you can read the analog input line multiple times, and feed those readings into an averaging or smoothing filter
 // One of my favorites for removing "single spike" errors from noisy sensor inputs is median3 which takes three values/readings as input
   
@@ -447,8 +445,8 @@ analogPinReading = analogRead(analogInputPin);
 
 
 // find the average for each set of readings
-double AVG_ACCEL_READING[3];
-double AVG_MAG_READING[3];
+double AVG_ACCEL_READING[] = {0.0, 0.0, 0.0};
+double AVG_MAG_READING[] = {0.0, 0.0, 0.0};
 
 loop_readings(AVG_ACCEL_READING, AVG_MAG_READING, 9);
 
@@ -588,8 +586,9 @@ pinMode(BLUE_PIN,INPUT_PULLUP); // BLUE to indicate RTC events
     Serial.print(",");  
     Serial.print(safetyMargin4SDsave);
     Serial.print(", ");    
-    Serial.print(analogPinReading);
-    Serial.println(","); Serial.flush();
+//    Serial.print(analogPinReading);
+//    Serial.println(","); 
+    Serial.flush();
 #endif
   
 //============Set the next alarm time =============
@@ -950,6 +949,7 @@ double calculate_direction(double *MAG_READING, double *ACCEL_READING){
     heading = 270;
   }
 
+  Serial.print((String) "Heading: " + heading);
   return heading;
 }
 
@@ -998,44 +998,31 @@ double calculate_tilt_angle(double *ACCEL_READING){
   return theta*180/PI;
 }
 
+/*-------------------------------------
+ * Reads the measurements from accelerometer + magnetometer n times, then creates an average for both 
+ * input: array of doubles AVG_ACCEL_READING - will be {0, 0, 0} initially --> modified to have the average acceleration reading
+ *        array of doubles AVG_MAD_READING - will be {0, 0, 0} initially --> modified to have the average magnetometer reading
+*/
 double loop_readings(double *AVG_ACCEL_READING, double *AVG_MAG_READING, int n){
-  // horrible written to save space
-  double avg_accel_x = 0.0, avg_accel_y = 0.0, avg_accel_z = 0.0;
-  double avg_mag_x = 0.0, avg_mag_y = 0.0, avg_mag_z = 0.0;
-  
   for (int i = 0; i < n; i++) {
     double ACCEL_READING[3];
-    double MAG_READING[3];
     read_accelerometer(ACCEL_READING);
+    double MAG_READING[3];
     read_magnetometer(MAG_READING);
-  
-    avg_accel_x += ACCEL_READING[0];
-    avg_accel_y += ACCEL_READING[1];
-    avg_accel_z += ACCEL_READING[2];
-  
-    avg_mag_x += MAG_READING[0];
-    avg_mag_y += MAG_READING[1];
-    avg_mag_z += MAG_READING[2];
+    
+    for (int i = 0; i < 3; i++){
+      AVG_ACCEL_READING[i] += ACCEL_READING[i];
+      AVG_MAG_READING[i] += MAG_READING[i];
+    }
     delay(1000);
   }
 
-  AVG_ACCEL_READING[0] = avg_accel_x / n;
-  AVG_ACCEL_READING[1] = avg_accel_y / n;
-  AVG_ACCEL_READING[2] = avg_accel_z / n;
-  
-  AVG_MAG_READING[0] = avg_mag_x / n;
-  AVG_MAG_READING[1] =  avg_mag_y / n;
-  AVG_MAG_READING[2] = avg_mag_z / n;
+  for (int i=0; i<3; i++){
+    AVG_ACCEL_READING[i] /= n;
+    AVG_MAG_READING[i] /= n;
+  }
 }
-//-------------------------
 
-// unit conversion functions
-double inchesToMeters(double in){
-  return (in / 39.37);
-}
-double gramsToKg(double grams){
-  return (grams / 1000);
-}
 //================================================================================================
 // NOTE: for more complex signal filtering, look into the digitalSmooth function with outlier rejection
 // by Paul Badger at  http://playground.arduino.cc/Main/DigitalSmooth  works well with acclerometers, etc
