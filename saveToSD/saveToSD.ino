@@ -112,6 +112,9 @@ float floatbuffer = 9999.9;  // for temporary float calculations
 #include <Adafruit_Sensor.h>
 #include <Adafruit_LSM303DLH_Mag.h>
 #include <Adafruit_LSM303_Accel.h>
+#include <LSM303.h>
+
+LSM303 compass;
 /* Assign a unique ID to this sensor at the same time */
 Adafruit_LSM303_Accel_Unified accel = Adafruit_LSM303_Accel_Unified(54321);
 Adafruit_LSM303DLH_Mag_Unified mag = Adafruit_LSM303DLH_Mag_Unified(12345);
@@ -168,6 +171,11 @@ bitSet (DIDR0, ADC3D);  // disable digital buffer on A3
   
   Serial.begin(115200);    // Always serial.begin because if 'anything' in some random library tries to print without it you get a HARD system freeze
   Wire.begin();          // Start the i2c interface
+  
+  // next two lines from https://forum.arduino.cc/t/lsm303dlhc-calibration-pitch-roll-and-tilt-compensated-heading/256406
+  compass.init();
+  compass.enableDefault();
+  
   RTC.begin();           // RTC initialization:
   RTC.turnOffAlarm(1);
   clearClockTrigger();   // Function stops RTC from holding interrupt line low after power reset
@@ -915,42 +923,68 @@ double read_magnetometer(double *MAG_READING){
   
 }
 
+/*
+ * calcululations based on https://forum.arduino.cc/t/lsm303dlhc-calibration-pitch-roll-and-tilt-compensated-heading/256406
+ * input: MAG_READING[3] - 3D measurements from magnetometer
+ * input: ACCEL_READING[3] - 3D measurements from accelerometer
+ * output: heading
+ */
 double calculate_direction(double *MAG_READING, double *ACCEL_READING){
-  // calculations for this function based on https://www.pololu.com/file/0J434/LSM303DLH-compass-app-note.pdf
-  double Mx = MAG_READING[0], My = MAG_READING[1], Mz = MAG_READING[2];
-  double Ax = ACCEL_READING[0], Ay = ACCEL_READING[1], Az = ACCEL_READING[2];
+  const float alpha = 0.15;
+  double fXa = ACCEL_READING[0], fYa = ACCEL_READING[1], fZa = ACCEL_READING[2];
+  double fXm = MAG_READING[0], fYm = MAG_READING[1], fZm = MAG_READING[2];
+  
+  compass.read();
+  float pitch, pitch_print, roll, roll_print, Heading, Xm_off, Ym_off, Zm_off, Xm_cal, Ym_cal, Zm_cal, fXm_comp, fYm_comp;
 
-  // equation 10
-  double rho = asin(-Ax);
-  double gamma = asin(Ay/cos(rho));
+  // INPUT HERE: take these values from the Combined bias(b): field in Magneto
+  float combined_bias_x = -4211.532222;
+  float combined_bias_y = 31324.106405;
+  float combined_bias_z = -9758.227533;
 
-  // equation 12
-  double mag_x = Mx*cos(rho) + Mz*sin(rho);
-  double mag_y = Mx*sin(gamma)*sin(rho) + My*cos(gamma) - Mz*sin(gamma)*cos(rho);
-  double mag_z = -Mx*cos(gamma)*sin(rho) + My*sin(gamma) + Mz*cos(gamma)*cos(rho);
+  // INPUT HERE; take these values from the "Correction for combined scale factors..." field in Magneto
+  float correction_xcal_xoff = 0.001120;
+  float correction_xcal_yoff = 0.000058;
+  float correction_xcal_zoff = 0.000027;
+  float correction_ycal_xoff = 0.000058;
+  float correction_ycal_yoff = 0.001003;
+  float correction_ycal_zoff = 0.000013;
+  float correction_zcal_xoff = 0.000027;
+  float correction_zcal_yoff = 0.000013;
+  float correction_zcal_zoff = 0.001300;
+  
+  // Magnetometer calibration
+  Xm_off = compass.m.x*(100000.0/1100.0) - combined_bias_x;
+  Ym_off = compass.m.y*(100000.0/1100.0) - combined_bias_y;
+  Zm_off = compass.m.z*(100000.0/980.0 ) - combined_bias_z;
+  Xm_cal =  correction_xcal_xoff*Xm_off + correction_xcal_yoff*Ym_off + correction_xcal_zoff*Zm_off;
+  Ym_cal =  correction_ycal_xoff*Xm_off + correction_ycal_yoff*Ym_off + correction_ycal_zoff*Zm_off;
+  Zm_cal =  correction_zcal_xoff*Xm_off + correction_zcal_yoff*Ym_off + correction_zcal_zoff*Zm_off;
 
+  // Low-Pass filter magnetometer
+  fXm = Xm_cal * alpha + (fXm * (1.0 - alpha));
+  fYm = Ym_cal * alpha + (fYm * (1.0 - alpha));
+  fZm = Zm_cal * alpha + (fZm * (1.0 - alpha));
 
-  double heading = 0.0;
-
-  // equation 13
-  if ((mag_x > 0) & (mag_y >= 0)){
-    heading = atan(mag_y / mag_x);
-  }
-  else if (mag_x < 0){
-    heading = 180 + atan(mag_y / mag_x);
-  }
-  else if (mag_x > 0 & mag_y <= 0){
-    heading = 360 + atan(mag_y / mag_x);
-  }
-  else if (mag_x == 0 & mag_y < 0){
-    heading = 90;
-  }
-  else if (mag_x == 0 & mag_y > 0){
-    heading = 270;
-  }
-
-  Serial.print((String) "Heading: " + heading);
-  return heading;
+  // Pitch and roll
+  roll  = atan2(fYa, sqrt(fXa*fXa + fZa*fZa));
+  pitch = atan2(fXa, sqrt(fYa*fYa + fZa*fZa));
+  roll_print = roll*180.0/M_PI;
+  pitch_print = pitch*180.0/M_PI;
+  
+  // Tilt compensated magnetic sensor measurements
+  fXm_comp = fXm*cos(pitch)+fZm*sin(pitch);
+  fYm_comp = fXm*sin(roll)*sin(pitch)+fYm*cos(roll)-fZm*sin(roll)*cos(pitch);
+  
+  // Arctangent of y/x
+  Heading = (atan2(fYm_comp,fXm_comp)*180.0)/M_PI;
+  if (Heading < 0)
+  Heading += 360;
+  
+  Serial.print("Pitch (X): "); Serial.print(pitch_print); Serial.print("  ");
+  Serial.print("Roll (Y): "); Serial.print(roll_print); Serial.print("  ");
+  Serial.print("Heading: "); Serial.println(Heading);
+  return Heading;
 }
 
 
