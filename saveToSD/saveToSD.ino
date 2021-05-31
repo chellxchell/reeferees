@@ -93,8 +93,8 @@ byte bytebuffer1 = 0;     // for functions that return a byte - usually comms wi
 byte bytebuffer2 = 0;     // second buffer for 16-bit sensor register readings
 int integerBuffer = 9999;    // for temp-swapping ADC readings
 float floatbuffer = 9999.9;  // for temporary float calculations
-#define analogInputPin A0    //for analog pin reading
-int analogPinReading = 0;
+//#define analogInputPin A0    //for analog pin reading
+//int analogPinReading = 0;
 
 //Sensor specific variables & defines:
 //====================================
@@ -272,42 +272,40 @@ bitSet (DIDR0, ADC3D);  // disable digital buffer on A3
     while (1)
       ;
   }
-  /* Display some basic information on this sensor */
-//  displayMagSensorDetails();
   
 //---------
-  accel.setRange(LSM303_RANGE_4G);
-  Serial.print("Range set to: ");
-  lsm303_accel_range_t new_range = accel.getRange();
-  switch (new_range) {
-  case LSM303_RANGE_2G:
-    Serial.println("+- 2G");
-    break;
-  case LSM303_RANGE_4G:
-    Serial.println("+- 4G");
-    break;
-  case LSM303_RANGE_8G:
-    Serial.println("+- 8G");
-    break;
-  case LSM303_RANGE_16G:
-    Serial.println("+- 16G");
-    break;
-  }
-
-  accel.setMode(LSM303_MODE_NORMAL);
-  Serial.print("Mode set to: ");
-  lsm303_accel_mode_t new_mode = accel.getMode();
-  switch (new_mode) {
-  case LSM303_MODE_NORMAL:
-    Serial.println("Normal");
-    break;
-  case LSM303_MODE_LOW_POWER:
-    Serial.println("Low Power");
-    break;
-  case LSM303_MODE_HIGH_RESOLUTION:
-    Serial.println("High Resolution");
-    break;
-  }
+//  accel.setRange(LSM303_RANGE_4G);
+//  Serial.print("Range set to: ");
+//  lsm303_accel_range_t new_range = accel.getRange();
+//  switch (new_range) {
+//  case LSM303_RANGE_2G:
+//    Serial.println("+- 2G");
+//    break;
+//  case LSM303_RANGE_4G:
+//    Serial.println("+- 4G");
+//    break;
+//  case LSM303_RANGE_8G:
+//    Serial.println("+- 8G");
+//    break;
+//  case LSM303_RANGE_16G:
+//    Serial.println("+- 16G");
+//    break;
+//  }
+//
+//  accel.setMode(LSM303_MODE_NORMAL);
+//  Serial.print("Mode set to: ");
+//  lsm303_accel_mode_t new_mode = accel.getMode();
+//  switch (new_mode) {
+//  case LSM303_MODE_NORMAL:
+//    Serial.println("Normal");
+//    break;
+//  case LSM303_MODE_LOW_POWER:
+//    Serial.println("Low Power");
+//    break;
+//  case LSM303_MODE_HIGH_RESOLUTION:
+//    Serial.println("High Resolution");
+//    break;
+//  }
 //#ifdef TS_DS18B20
 //  
 //  ds.search(addr);
@@ -421,11 +419,11 @@ pinMode(GREEN_PIN,INPUT_PULLUP); //green indicates sensor readings taking place
 LowPower.powerDown(SLEEP_30MS, ADC_OFF, BOD_ON); //optional delay here to make indicator pip more visible
 //============================================================
 // Read Analog Input
-analogReference(DEFAULT);analogRead(analogInputPin); //always throw away the first ADC reading
-delay(10);  //10msec delay gives Aref capacitor time to adjust
+//analogReference(DEFAULT);analogRead(analogInputPin); //always throw away the first ADC reading
+//delay(10);  //10msec delay gives Aref capacitor time to adjust
 
 //now you can do a single analog reading one time 
-analogPinReading = analogRead(analogInputPin);
+//analogPinReading = analogRead(analogInputPin);
 // OR you can read the analog input line multiple times, and feed those readings into an averaging or smoothing filter
 // One of my favorites for removing "single spike" errors from noisy sensor inputs is median3 which takes three values/readings as input
   
@@ -444,39 +442,16 @@ analogPinReading = analogRead(analogInputPin);
 //#endif
 //digitalWrite(GREEN_PIN, LOW);
 
-// horrible written to save space
-double avg_accel_x = 0.0, avg_accel_y = 0.0, avg_accel_z = 0.0;
-double avg_mag_x = 0.0, avg_mag_y = 0.0, avg_mag_z = 0.0;
 
-for (int i = 0; i < 9; i++) {
-  double ACCEL_READING[3];
-  double MAG_READING[3];
-  read_accelerometer(ACCEL_READING);
-  read_magnetometer(MAG_READING);
-
-  avg_accel_x += ACCEL_READING[0];
-  avg_accel_y += ACCEL_READING[1];
-  avg_accel_z += ACCEL_READING[2];
-
-  avg_mag_x += MAG_READING[0];
-  avg_mag_y += MAG_READING[1];
-  avg_mag_z += MAG_READING[2];
-  delay(1000);
-}
 
 // find the average for each set of readings
-double AVG_ACCEL_READING[3] = {avg_accel_x / 9, avg_accel_y / 9, avg_accel_z / 9};
-double AVG_MAG_READING[3] = {avg_mag_x / 9, avg_mag_y / 9, avg_mag_z / 9};
+double AVG_ACCEL_READING[] = {0.0, 0.0, 0.0};
+double AVG_MAG_READING[] = {0.0, 0.0, 0.0};
+
+loop_readings(AVG_ACCEL_READING, AVG_MAG_READING, 9);
 
 double TILT_ANGLE = calculate_tilt_angle(AVG_ACCEL_READING);
-double DIRECTION = calculate_direction(AVG_MAG_READING);
-
-//double ACCEL_READING[3];
-//read_accelerometer(ACCEL_READING);
-//double TILT_ANGLE = calculate_tilt_angle(ACCEL_READING);
-//
-//double MAG_READING[3];
-//double DIRECTION = read_magnetometer(MAG_READING);
+double DIRECTION = calculate_direction(AVG_MAG_READING, AVG_ACCEL_READING);
 Serial.print("\n ------------------------ \n");
 
 //========================================================
@@ -484,29 +459,29 @@ Serial.print("\n ------------------------ \n");
 // Modfied from  //https://playground.arduino.cc/Learning/LEDSensor  I added PIND for speed
 // An explaination of the reverse-bias LED reading technique https://www.sparkfun.com/news/2161
 // these logarithmic 'discharge time' readings get smaller as the amount of light increases
-
-#ifdef readRedLED 
-uint32_t redLEDreading=readRedLEDchannel(); //call the function which reads the RED led channel
-  #ifdef ECHO_TO_SERIAL
-   Serial.print(F("RedLED= "));Serial.print(redLEDreading);Serial.flush();
-  #endif
-#endif  //readRedLED 
-
-#ifdef readGreenLED 
-uint32_t greenLEDreading=readGreenLEDchannel(); //call the function which reads the RED led channel
-  #ifdef ECHO_TO_SERIAL
-   Serial.print(F("GreenLED= "));Serial.print(greenLEDreading);Serial.flush();
-  #endif
-#endif  //readGreenLED 
-
-#ifdef readBlueLED 
-uint32_t blueLEDreading=readBlueLEDchannel(); //call the function which reads the RED led channel
-  #ifdef ECHO_TO_SERIAL
-   Serial.print(F("BlueLED= "));Serial.print(blueLEDreading);Serial.flush();
-  #endif
-#endif  //readBlueLED 
- 
-pinMode(RED_PIN,INPUT_PULLUP); //indicate SD saving
+//
+//#ifdef readRedLED 
+//uint32_t redLEDreading=readRedLEDchannel(); //call the function which reads the RED led channel
+//  #ifdef ECHO_TO_SERIAL
+//   Serial.print(F("RedLED= "));Serial.print(redLEDreading);Serial.flush();
+//  #endif
+//#endif  //readRedLED 
+//
+//#ifdef readGreenLED 
+//uint32_t greenLEDreading=readGreenLEDchannel(); //call the function which reads the RED led channel
+//  #ifdef ECHO_TO_SERIAL
+//   Serial.print(F("GreenLED= "));Serial.print(greenLEDreading);Serial.flush();
+//  #endif
+//#endif  //readGreenLED 
+//
+//#ifdef readBlueLED 
+//uint32_t blueLEDreading=readBlueLEDchannel(); //call the function which reads the RED led channel
+//  #ifdef ECHO_TO_SERIAL
+//   Serial.print(F("BlueLED= "));Serial.print(blueLEDreading);Serial.flush();
+//  #endif
+//#endif  //readBlueLED 
+// 
+//pinMode(RED_PIN,INPUT_PULLUP); //indicate SD saving
   
 // ========== Pre SD saving battery checks ==========
 #if defined (unregulated2xLithiumAA) || defined(ECHO_TO_SERIAL) 
@@ -611,8 +586,9 @@ pinMode(BLUE_PIN,INPUT_PULLUP); // BLUE to indicate RTC events
     Serial.print(",");  
     Serial.print(safetyMargin4SDsave);
     Serial.print(", ");    
-    Serial.print(analogPinReading);
-    Serial.println(","); Serial.flush();
+//    Serial.print(analogPinReading);
+//    Serial.println(","); 
+    Serial.flush();
 #endif
   
 //============Set the next alarm time =============
@@ -939,26 +915,42 @@ double read_magnetometer(double *MAG_READING){
   
 }
 
-double calculate_direction(double *MAG_READING){
-  double res = 0.0;
-  double x = MAG_READING[0], y = MAG_READING[1], z = MAG_READING[2];
-  
-  if (z > 0){
-    res = 180 + (atan(y/z))*180/PI;
+double calculate_direction(double *MAG_READING, double *ACCEL_READING){
+  // calculations for this function based on https://www.pololu.com/file/0J434/LSM303DLH-compass-app-note.pdf
+  double Mx = MAG_READING[0], My = MAG_READING[1], Mz = MAG_READING[2];
+  double Ax = ACCEL_READING[0], Ay = ACCEL_READING[1], Az = ACCEL_READING[2];
+
+  // equation 10
+  double rho = asin(-Ax);
+  double gamma = asin(Ay/cos(rho));
+
+  // equation 12
+  double mag_x = Mx*cos(rho) + Mz*sin(rho);
+  double mag_y = Mx*sin(gamma)*sin(rho) + My*cos(gamma) - Mz*sin(gamma)*cos(rho);
+  double mag_z = -Mx*cos(gamma)*sin(rho) + My*sin(gamma) + Mz*cos(gamma)*cos(rho);
+
+
+  double heading = 0.0;
+
+  // equation 13
+  if ((mag_x > 0) & (mag_y >= 0)){
+    heading = atan(mag_y / mag_x);
   }
-  else if (z < 0){
-    if (y > 0){
-      res = (atan(y/abs(z)))*180/PI - 360;
-    }
-    if (y < 0){
-      res = (atan(y/abs(z)))*180/PI;
-    }
+  else if (mag_x < 0){
+    heading = 180 + atan(mag_y / mag_x);
   }
-  else{
-    Serial.print("No current");
+  else if (mag_x > 0 & mag_y <= 0){
+    heading = 360 + atan(mag_y / mag_x);
   }
-  Serial.print((String) "Compass Result: " + res + "\n");
-  return res;
+  else if (mag_x == 0 & mag_y < 0){
+    heading = 90;
+  }
+  else if (mag_x == 0 & mag_y > 0){
+    heading = 270;
+  }
+
+  Serial.print((String) "Heading: " + heading);
+  return heading;
 }
 
 
@@ -990,8 +982,8 @@ double read_accelerometer(double *ACCEL_READING){
 // calculates tilt angle based on accelerometer reading
 double calculate_tilt_angle(double *ACCEL_READING){
   // set constants
-  const double g = 9.81;
-  const double ACCEL_0[3] = {g, 0.54, 0.46}; // a0 acceleration vector (hanging sensor)
+  const double g = 9.216;
+  const double ACCEL_0[3] = {g, -0.133, 2.302}; // a0 acceleration vector (hanging sensor)
 
   // calculate theta
   double a_numer = ACCEL_READING[0]*ACCEL_0[0] + ACCEL_READING[1]*ACCEL_0[1] + ACCEL_READING[2]*ACCEL_0[2];
@@ -1006,15 +998,31 @@ double calculate_tilt_angle(double *ACCEL_READING){
   return theta*180/PI;
 }
 
-//-------------------------
+/*-------------------------------------
+ * Reads the measurements from accelerometer + magnetometer n times, then creates an average for both 
+ * input: array of doubles AVG_ACCEL_READING - will be {0, 0, 0} initially --> modified to have the average acceleration reading
+ *        array of doubles AVG_MAD_READING - will be {0, 0, 0} initially --> modified to have the average magnetometer reading
+*/
+double loop_readings(double *AVG_ACCEL_READING, double *AVG_MAG_READING, int n){
+  for (int i = 0; i < n; i++) {
+    double ACCEL_READING[3];
+    read_accelerometer(ACCEL_READING);
+    double MAG_READING[3];
+    read_magnetometer(MAG_READING);
+    
+    for (int i = 0; i < 3; i++){
+      AVG_ACCEL_READING[i] += ACCEL_READING[i];
+      AVG_MAG_READING[i] += MAG_READING[i];
+    }
+    delay(1000);
+  }
 
-// unit conversion functions
-double inchesToMeters(double in){
-  return (in / 39.37);
+  for (int i=0; i<3; i++){
+    AVG_ACCEL_READING[i] /= n;
+    AVG_MAG_READING[i] /= n;
+  }
 }
-double gramsToKg(double grams){
-  return (grams / 1000);
-}
+
 //================================================================================================
 // NOTE: for more complex signal filtering, look into the digitalSmooth function with outlier rejection
 // by Paul Badger at  http://playground.arduino.cc/Main/DigitalSmooth  works well with acclerometers, etc
