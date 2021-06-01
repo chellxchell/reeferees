@@ -134,9 +134,12 @@ double calculate_direction(double *MAG_READING, double *ACCEL_READING){
   float correction_zcal_zoff = 0.001300;
   
   // Magnetometer calibration
-  Xm_off = MAG_READING[0]*(100000.0/1100.0) - combined_bias_x;
+//  Xm_off = MAG_READING[0]*(100000.0/1100.0) - combined_bias_x;
+//  Ym_off = MAG_READING[1]*(100000.0/1100.0) - combined_bias_y;
+//  Zm_off = MAG_READING[2]*(100000.0/980.0 ) - combined_bias_z;
+  Xm_off = -MAG_READING[2]*(100000.0/1100.0) - combined_bias_z;
   Ym_off = MAG_READING[1]*(100000.0/1100.0) - combined_bias_y;
-  Zm_off = MAG_READING[2]*(100000.0/980.0 ) - combined_bias_z;
+  Zm_off = MAG_READING[0]*(100000.0/980.0 ) - combined_bias_x;
   Xm_cal =  correction_xcal_xoff*Xm_off + correction_xcal_yoff*Ym_off + correction_xcal_zoff*Zm_off;
   Ym_cal =  correction_ycal_xoff*Xm_off + correction_ycal_yoff*Ym_off + correction_ycal_zoff*Zm_off;
   Zm_cal =  correction_zcal_xoff*Xm_off + correction_zcal_yoff*Ym_off + correction_zcal_zoff*Zm_off;
@@ -148,7 +151,9 @@ double calculate_direction(double *MAG_READING, double *ACCEL_READING){
 
   // Pitch and roll
   roll  = atan2(ACCEL_READING[1], sqrt(ACCEL_READING[0]*ACCEL_READING[0] + ACCEL_READING[2]*ACCEL_READING[2]));
-  pitch = atan2(ACCEL_READING[0], sqrt(ACCEL_READING[1]*ACCEL_READING[1] + ACCEL_READING[2]*ACCEL_READING[2]));
+  pitch = atan2(-ACCEL_READING[2], sqrt(ACCEL_READING[1]*ACCEL_READING[1] + ACCEL_READING[2]*ACCEL_READING[0]));
+
+//  pitch = atan2(ACCEL_READING[0], sqrt(ACCEL_READING[1]*ACCEL_READING[1] + ACCEL_READING[2]*ACCEL_READING[2]));
   roll_print = roll*180.0/M_PI;
   pitch_print = pitch*180.0/M_PI;
   

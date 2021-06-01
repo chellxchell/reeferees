@@ -99,7 +99,6 @@ float floatbuffer = 9999.9;  // for temporary float calculations
 #include <Adafruit_Sensor.h>
 #include <Adafruit_LSM303DLH_Mag.h>
 #include <Adafruit_LSM303_Accel.h>
-#include <LSM303.h>
 
 /* Assign a unique ID to this sensor at the same time */
 Adafruit_LSM303_Accel_Unified accel = Adafruit_LSM303_Accel_Unified(54321);
@@ -354,19 +353,6 @@ if (preSDsaveBatterycheck < (systemShutdownVoltage+safetyMargin4SDsave+50)) {  /
       file.print(AVG_MAG_READING[j]);
       file.print(",");
     }
-   
-#ifdef readRedLED 
-    file.print(redLEDreading);
-    file.print(",");
-#endif 
-#ifdef readGreenLED   
-    file.print(greenLEDreading);
-    file.print(","); 
-#endif 
-#ifdef readBlueLED   
-    file.print(blueLEDreading);
-    file.print(","); 
-#endif 
     file.println(); 
     file.close();
 
