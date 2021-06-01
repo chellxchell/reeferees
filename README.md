@@ -1,28 +1,30 @@
 # reeferees
 
-## Set Up Notes
-* [Download git](https://git-scm.com/downloads)
-* Open up command prompt and type in `cd Documents`
-* In the command prompt, type in `git clone https://github.com/chellxchell/reeferees.git`
-* In File Explorer, navigate to Documents > reeferees > saveToSD and open up 'saveToSD'
-* You'll need to download 3 libraries: RTClib.h, LowPower.h, and SdFat.h. Go to each of these three links, click the green "Code" button with a dropdown, and click "Download Zip"
+## Software Installations
+* Make sure you have[git downloaded](https://git-scm.com/downloads). It should be already installed for MacOS, but you need a manual install for Windows)
+* Need the [Arduino IDE](https://www.arduino.cc/en/software)
+* Install [the UART driver](https://ftdichip.com/drivers/vcp-drivers/). You will need this to connect the Arduino to your computer.
+
+## Installing Libraries
+* Accelerometer/Magnetometer libraries
+  * Follow [these instructions](https://learn.adafruit.com/lsm303-accelerometer-slash-compass-breakout/coding#install-the-libraries-1512217-3). For the magnetometer, download th e library for the LSM303/LSM303DLHC.
+* Manual downloads - for each of these libraries, download them as a .zip file and follow [these instructions](https://www.arduino.cc/en/Guide/Libraries) to install them.
+  * https://github.com/pololu/lsm303-arduino/archive/master.zip
   * https://github.com/MrAlvin/RTClib
   * https://github.com/rocketscream/Low-Power
   * https://github.com/greiman/SdFat
-* Once you have each zip file, unzip it. This can be done by right-clicking the zip file in the Downloads folder and clicking "Extract All"
-* Move all three unzipped folders into Documents > Arduino > Libraries
-* Make sure the unzipped folders are named "RTClib" and "LowPower" and "SdFat" (case-sensitive and symbol-sensitive). If they're not named exactly this an error will occur.
-* Make sure the data logger is connected properly (see Debugging notes below)
+
+## Connect the Arduino
+* In the Arduino IDE, in Tools > Board make sure you have "Arduino Pro or Pro Mini" selected
+* In Tools > Port make sure you have the correct port selected (you can check in Device Manager)
+* In Tools > Processor make sure you have "ATmega328P (3.3V, 8MHz)
+* Make sure the wires are connected is with the brown side on the left and the blue on the right (with the ProMini facing closest to you)
+* Set the Serial Monitor to 115200 baud
+
+## Set Up The Code
+* Clone this repository
+  * Open up command prompt and [navigate to the folder](https://www.digitalcitizen.life/command-prompt-how-use-basic-commands/) where you want to save this repository
+  * In the command prompt, type in `git clone https://github.com/chellxchell/reeferees.git`
 * Go back to the saveToSd file and press "upload" to upload the script to the Arduino
 * Go to Tools > Serial Monitor to view the console output
-* If you change any code and you want to push it to github, open up Command Prompt and do the following:
-  * `cd Documents/reeferees`
-  * `git add .`
-  * `git commit -m "some message"`
-  * `git push`
-* If you want to revert to the state of the code before we added the '9 times' thing, while you're in Documents/reeferees, type: `git reset --hard 0230b8baa7968b64f8ac74348096e87ac593e138`. While you are in this state, DO NOT CHANGE ANYTHING because it'll mess up the version control and won't save it. If you want to change anything, revert to the '9 times' state. If you are in the 'not 9 times' state and want to revert back to the '9 times' state, type `git pull`.
-## Debugging notes
-* Port is Com 5
-* Order is brown-left, blue-right with the ProMini facing closest to you
-* Set to 115200 baud
-* Download library zip files directly
+* In File Explorer, navigate to whatever > filepath > reeferees > saveToSD and open up 'saveToSD'
