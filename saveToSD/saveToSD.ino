@@ -97,13 +97,15 @@ float floatbuffer = 9999.9;  // for temporary float calculations
 //Sensor specific variables & defines:
 //====================================
 #include <Adafruit_Sensor.h>
-#include <Adafruit_LSM303DLH_Mag.h>
+//#include <Adafruit_LSM303DLH_Mag.h>
 #include <Adafruit_LSM303_Accel.h>
 
 /* Assign a unique ID to this sensor at the same time */
 Adafruit_LSM303_Accel_Unified accel = Adafruit_LSM303_Accel_Unified(54321);
-Adafruit_LSM303DLH_Mag_Unified mag = Adafruit_LSM303DLH_Mag_Unified(12345);
+//Adafruit_LSM303DLH_Mag_Unified mag = Adafruit_LSM303DLH_Mag_Unified(12345);
 
+#include <LSM303.h>
+LSM303 compass;
 //======================================================================================================================
 //  *  *   *   *   *   *   SETUP   *   *   *   *   *
 //======================================================================================================================
@@ -245,17 +247,17 @@ bitSet (DIDR0, ADC3D);  // disable digital buffer on A3
       ;
   }
   // --------
-  Serial.println("Magnetometer Test");
-  Serial.println("");
-  /* Enable auto-gain */
-  mag.enableAutoRange(true);
-  /* Initialise the sensor */
-  if (!mag.begin()) {
-    /* There was a problem detecting the LSM303 ... check your connections */
-    Serial.println("Ooops, no LSM303 detected ... Check your wiring!");
-    while (1)
-      ;
-  }
+//  Serial.println("Magnetometer Test");
+//  Serial.println("");
+//  /* Enable auto-gain */
+//  mag.enableAutoRange(true);
+//  /* Initialise the sensor */
+//  if (!mag.begin()) {
+//    /* There was a problem detecting the LSM303 ... check your connections */
+//    Serial.println("Ooops, no LSM303 detected ... Check your wiring!");
+//    while (1)
+//      ;
+//  }
   
 //==================================================================================================================
 //Delay logger start until alarm times are in sync with sampling intervals
@@ -700,19 +702,27 @@ newest = analogRead(A0);
 //  SENSOR READING FUNCTIONS
 //================================================================================================
 double read_magnetometer(double *MAG_READING){
-  /* Get a new sensor event */
-  sensors_event_t event;
-  mag.getEvent(&event);
+  compass.read();
+  MAG_READING[0] = compass.m.x;
+  MAG_READING[1] = compass.m.y;
+  MAG_READING[2] = compass.m.z;
 
-  /* Display the results (magnetic vector values are in micro-Tesla (uT)) */
-  /* Get compass measurements */
-  MAG_READING[0] = event.magnetic.x;
-  MAG_READING[1] = event.magnetic.y;
-  MAG_READING[2] = event.magnetic.z;
-  
-  Serial.print((String) "Mag Raw X: " + event.magnetic.x + "  ");
-  Serial.print((String) "Mag Raw Y: " + event.magnetic.y + "  ");
-  Serial.print((String) "Mag Raw Z: " + event.magnetic.z + "\n");
+  Serial.print((String) "Mag Raw X: " + compass.m.x + "  ");
+  Serial.print((String) "Mag Raw Y: " +  compass.m.y + "  ");
+  Serial.print((String) "Mag Raw Z: " +  compass.m.z + "\n");
+//  /* Get a new sensor event */
+//  sensors_event_t event;
+//  mag.getEvent(&event);
+//
+//  /* Display the results (magnetic vector values are in micro-Tesla (uT)) */
+//  /* Get compass measurements */
+//  MAG_READING[0] = event.magnetic.x;
+//  MAG_READING[1] = event.magnetic.y;
+//  MAG_READING[2] = event.magnetic.z;
+//  
+//  Serial.print((String) "Mag Raw X: " + event.magnetic.x + "  ");
+//  Serial.print((String) "Mag Raw Y: " + event.magnetic.y + "  ");
+//  Serial.print((String) "Mag Raw Z: " + event.magnetic.z + "\n");
   
 }
 
@@ -776,11 +786,8 @@ double calculate_direction(double *MAG_READING, double *ACCEL_READING){
   Serial.print("Pitch (X): "); Serial.print(pitch_print); Serial.print("  ");
   Serial.print("Roll (Y): "); Serial.print(roll_print); Serial.print("  ");
   Serial.print("Heading: "); Serial.println(Heading);
-  delay(250);
   return Heading;
 }
-
-
 
 //-------------------------
 
