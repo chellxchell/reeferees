@@ -30,7 +30,7 @@
 * In File Explorer, navigate to whatever > filepath > reeferees > saveToSD and open up 'saveToSD'
 
 ## Calibration
-* Download the [Magneto application] (https://sites.google.com/site/sailboatinstruments1/home)
+* Download the [Magneto application](https://sites.google.com/site/sailboatinstruments1/home)
 * [Calculate the magnetic field](https://www.ngdc.noaa.gov/geomag/calculators/magcalc.shtml#igrfwmm) using your latitude and longitude (should be the first value under "Total Field")
 * In the repository, go to reeferees > calibration > calibrate_mag and open up `calibrate_mag` Arduino file
 * Upload the code to the Arduino and open up Tools > Serial Monitor
