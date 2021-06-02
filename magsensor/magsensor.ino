@@ -103,7 +103,7 @@ double calculate_tilt_angle(double *ACCEL_READING){
   double a_denom_0 = sqrt(pow(ACCEL_0[0],2) + pow(ACCEL_0[1],2) + pow(ACCEL_0[2],2));
   double a_term = a_numer / (a_denom_reading * a_denom_0);
   double theta = acos(a_term);
-  
+ 
   Serial.print("Theta: ");
   Serial.print(theta*180/PI);
   Serial.print("\n");
@@ -117,7 +117,7 @@ double calculate_direction(double *MAG_READING, double *ACCEL_READING){
   float fZm = 0;
   float pitch, pitch_print, roll, roll_print, Heading, Xm_off, Ym_off, Zm_off, Xm_cal, Ym_cal, Zm_cal, fXm_comp, fYm_comp;
 
-  // INPUT HERE: take these values from the Combined bias(b): field in Magneto
+// INPUT HERE: take these values from the Combined bias(b): field in Magneto
   float combined_bias_x = -4211.532222;
   float combined_bias_y = 31324.106405;
   float combined_bias_z = -9758.227533;
@@ -132,14 +132,31 @@ double calculate_direction(double *MAG_READING, double *ACCEL_READING){
   float correction_zcal_xoff = 0.000027;
   float correction_zcal_yoff = 0.000013;
   float correction_zcal_zoff = 0.001300;
-  
+//  // INPUT HERE: take these values from the Combined bias(b): field in Magneto
+//  float combined_bias_x = -442.469658;
+//  float combined_bias_y = 18761.954610;
+//  float combined_bias_z = -2437.724224;
+//
+//  // INPUT HERE; take these values from the "Correction for combined scale factors..." field in Magneto
+//  float correction_xcal_xoff = 0.001020;
+//  float correction_xcal_yoff = 0.000018;
+//  float correction_xcal_zoff = 0.000028;
+//  float correction_ycal_xoff = 0.000018;
+//  float correction_ycal_yoff = 0.001033;
+//  float correction_ycal_zoff = 0.000005;
+//  float correction_zcal_xoff = 0.000028;
+//  float correction_zcal_yoff = 0.000005;
+//  float correction_zcal_zoff = 0.001041;
+ 
   // Magnetometer calibration
-//  Xm_off = MAG_READING[0]*(100000.0/1100.0) - combined_bias_x;
-//  Ym_off = MAG_READING[1]*(100000.0/1100.0) - combined_bias_y;
-//  Zm_off = MAG_READING[2]*(100000.0/980.0 ) - combined_bias_z;
-  Xm_off = -MAG_READING[2]*(100000.0/1100.0) - combined_bias_z;
+  Xm_off = MAG_READING[0]*(100000.0/1100.0) - combined_bias_x;
   Ym_off = MAG_READING[1]*(100000.0/1100.0) - combined_bias_y;
-  Zm_off = MAG_READING[0]*(100000.0/980.0 ) - combined_bias_x;
+  Zm_off = MAG_READING[2]*(100000.0/980.0 ) - combined_bias_z;
+
+//  Xm_off = -MAG_READING[2]*(100000.0/1100.0) - combined_bias_z;
+//  Ym_off = MAG_READING[1]*(100000.0/1100.0) - combined_bias_y;
+//  Zm_off = MAG_READING[0]*(100000.0/980.0 ) - combined_bias_x;
+
   Xm_cal =  correction_xcal_xoff*Xm_off + correction_xcal_yoff*Ym_off + correction_xcal_zoff*Zm_off;
   Ym_cal =  correction_ycal_xoff*Xm_off + correction_ycal_yoff*Ym_off + correction_ycal_zoff*Zm_off;
   Zm_cal =  correction_zcal_xoff*Xm_off + correction_zcal_yoff*Ym_off + correction_zcal_zoff*Zm_off;
@@ -151,21 +168,22 @@ double calculate_direction(double *MAG_READING, double *ACCEL_READING){
 
   // Pitch and roll
   roll  = atan2(ACCEL_READING[1], sqrt(ACCEL_READING[0]*ACCEL_READING[0] + ACCEL_READING[2]*ACCEL_READING[2]));
-  pitch = atan2(-ACCEL_READING[2], sqrt(ACCEL_READING[1]*ACCEL_READING[1] + ACCEL_READING[2]*ACCEL_READING[0]));
 
-//  pitch = atan2(ACCEL_READING[0], sqrt(ACCEL_READING[1]*ACCEL_READING[1] + ACCEL_READING[2]*ACCEL_READING[2]));
+//  pitch = atan2(-ACCEL_READING[2], sqrt(ACCEL_READING[1]*ACCEL_READING[1] + ACCEL_READING[0]*ACCEL_READING[0]));
+  pitch = atan2(ACCEL_READING[0], sqrt(ACCEL_READING[1]*ACCEL_READING[1] + ACCEL_READING[2]*ACCEL_READING[2]));
+ 
   roll_print = roll*180.0/M_PI;
   pitch_print = pitch*180.0/M_PI;
-  
+ 
   // Tilt compensated magnetic sensor measurements
   fXm_comp = fXm*cos(pitch)+fZm*sin(pitch);
   fYm_comp = fXm*sin(roll)*sin(pitch)+fYm*cos(roll)-fZm*sin(roll)*cos(pitch);
-  
+ 
   // Arctangent of y/x
   Heading = (atan2(fYm_comp,fXm_comp)*180.0)/M_PI;
   if (Heading < 0)
   Heading += 360;
-  
+ 
   Serial.print("Pitch (X): "); Serial.print(pitch_print); Serial.print("  ");
   Serial.print("Roll (Y): "); Serial.print(roll_print); Serial.print("  ");
   Serial.print("Heading: "); Serial.println(Heading);
