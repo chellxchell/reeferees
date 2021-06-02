@@ -28,3 +28,22 @@
 * Go back to the saveToSd file and press "upload" to upload the script to the Arduino
 * Go to Tools > Serial Monitor to view the console output
 * In File Explorer, navigate to whatever > filepath > reeferees > saveToSD and open up 'saveToSD'
+
+## Calibration
+* Download the [Magneto application] (https://sites.google.com/site/sailboatinstruments1/home)
+* [Calculate the magnetic field](https://www.ngdc.noaa.gov/geomag/calculators/magcalc.shtml#igrfwmm) using your latitude and longitude (should be the first value under "Total Field")
+* In the repository, go to reeferees > calibration > calibrate_mag and open up `calibrate_mag` Arduino file
+* Upload the code to the Arduino and open up Tools > Serial Monitor
+* Keep moving around + rotating the data logger while the code is running. You should see 3 columns of values in the Serial Monitor
+* After about 5 minutes, copy and paste the contents of the Serial Monitor and copy and save it into a .txt file
+* Open up Magneto
+  * Enter in the Norm of Magnetic or Gravitational field (the one you calculated using latitude and longitude)
+  * Upload your .txt file
+  * Press "Calibrate"
+* Using the x, y, and z values under the "Combined bias (b)" field in Magneto:
+  * Search for `// INPUT HERE: take these values from the Combined bias(b): field in Magneto` in saveToSD.ino and change those corresponding values with the ones you got from Magneto
+  * Enter the values left to right (x is on the left, z is on the right)
+* Using the 9 values from the "Correction for combined scale factors"
+  * Search for `// INPUT HERE; take these values from the "Correction for combined scale factors..." field in Magneto`in saveToSD.ino and change those corresponding values with the ones you got from Magneto
+  * Enter the values going from left to right, top to down (top left first, bottom right last)
+  * Enter the values in 
