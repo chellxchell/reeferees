@@ -46,4 +46,3 @@
 * Using the 9 values from the "Correction for combined scale factors"
   * Search for `// INPUT HERE; take these values from the "Correction for combined scale factors..." field in Magneto`in saveToSD.ino and change those corresponding values with the ones you got from Magneto
   * Enter the values going from left to right, top to down (top left first, bottom right last)
-  * Enter the values in 
