@@ -71,21 +71,22 @@ void loop(void) {
   delay(500);
 
   // ------------------
-  mag.getEvent(&event);
+//  mag.getEvent(&event);
+  compass.read();
  
   /* Display the results (magnetic vector values are in micro-Tesla (uT)) */
   Serial.print("Raw Mag X: ");
-  Serial.print(event.magnetic.x);
+  Serial.print(compass.m.x);
   Serial.print("  ");
   Serial.print("Raw Mag Y: ");
-  Serial.print(event.magnetic.y);
+  Serial.print(compass.m.y);
   Serial.print("  ");
   Serial.print("Raw Mag Z: ");
-  Serial.print(event.magnetic.z);
+  Serial.print(compass.m.z);
   Serial.print("  ");
   Serial.println("uT");
 
-  double MAG_READING[] = {event.magnetic.x, event.magnetic.y, event.magnetic.z};
+  double MAG_READING[] = {compass.m.x, compass.m.y, compass.m.z};
   calculate_direction(MAG_READING,ACCEL_READING);
 
   /* Delay before the next sample */
@@ -117,45 +118,26 @@ double calculate_direction(double *MAG_READING, double *ACCEL_READING){
   float fZm = 0;
   float pitch, pitch_print, roll, roll_print, Heading, Xm_off, Ym_off, Zm_off, Xm_cal, Ym_cal, Zm_cal, fXm_comp, fYm_comp;
 
-// INPUT HERE: take these values from the Combined bias(b): field in Magneto
-  float combined_bias_x = -4211.532222;
-  float combined_bias_y = 31324.106405;
-  float combined_bias_z = -9758.227533;
+  // INPUT HERE: take these values from the Combined bias(b): field in Magneto
+  float combined_bias_x = -442.469658;
+  float combined_bias_y = 18761.954610;
+  float combined_bias_z = -2437.724224;
 
   // INPUT HERE; take these values from the "Correction for combined scale factors..." field in Magneto
-  float correction_xcal_xoff = 0.001120;
-  float correction_xcal_yoff = 0.000058;
-  float correction_xcal_zoff = 0.000027;
-  float correction_ycal_xoff = 0.000058;
-  float correction_ycal_yoff = 0.001003;
-  float correction_ycal_zoff = 0.000013;
-  float correction_zcal_xoff = 0.000027;
-  float correction_zcal_yoff = 0.000013;
-  float correction_zcal_zoff = 0.001300;
-//  // INPUT HERE: take these values from the Combined bias(b): field in Magneto
-//  float combined_bias_x = -442.469658;
-//  float combined_bias_y = 18761.954610;
-//  float combined_bias_z = -2437.724224;
-//
-//  // INPUT HERE; take these values from the "Correction for combined scale factors..." field in Magneto
-//  float correction_xcal_xoff = 0.001020;
-//  float correction_xcal_yoff = 0.000018;
-//  float correction_xcal_zoff = 0.000028;
-//  float correction_ycal_xoff = 0.000018;
-//  float correction_ycal_yoff = 0.001033;
-//  float correction_ycal_zoff = 0.000005;
-//  float correction_zcal_xoff = 0.000028;
-//  float correction_zcal_yoff = 0.000005;
-//  float correction_zcal_zoff = 0.001041;
+  float correction_xcal_xoff = 0.001020;
+  float correction_xcal_yoff = 0.000018;
+  float correction_xcal_zoff = 0.000028;
+  float correction_ycal_xoff = 0.000018;
+  float correction_ycal_yoff = 0.001033;
+  float correction_ycal_zoff = 0.000005;
+  float correction_zcal_xoff = 0.000028;
+  float correction_zcal_yoff = 0.000005;
+  float correction_zcal_zoff = 0.001041;
  
   // Magnetometer calibration
   Xm_off = MAG_READING[0]*(100000.0/1100.0) - combined_bias_x;
   Ym_off = MAG_READING[1]*(100000.0/1100.0) - combined_bias_y;
   Zm_off = MAG_READING[2]*(100000.0/980.0 ) - combined_bias_z;
-
-//  Xm_off = -MAG_READING[2]*(100000.0/1100.0) - combined_bias_z;
-//  Ym_off = MAG_READING[1]*(100000.0/1100.0) - combined_bias_y;
-//  Zm_off = MAG_READING[0]*(100000.0/980.0 ) - combined_bias_x;
 
   Xm_cal =  correction_xcal_xoff*Xm_off + correction_xcal_yoff*Ym_off + correction_xcal_zoff*Zm_off;
   Ym_cal =  correction_ycal_xoff*Xm_off + correction_ycal_yoff*Ym_off + correction_ycal_zoff*Zm_off;
@@ -176,8 +158,11 @@ double calculate_direction(double *MAG_READING, double *ACCEL_READING){
   pitch_print = pitch*180.0/M_PI;
  
   // Tilt compensated magnetic sensor measurements
-  fXm_comp = fXm*cos(pitch)+fZm*sin(pitch);
-  fYm_comp = fXm*sin(roll)*sin(pitch)+fYm*cos(roll)-fZm*sin(roll)*cos(pitch);
+//  fXm_comp = fXm*cos(pitch)+fZm*sin(pitch);
+//  fYm_comp = fXm*sin(roll)*sin(pitch)+fYm*cos(roll)-fZm*sin(roll)*cos(pitch);
+  fXm_comp = -fZm*cos(pitch)+fXm*sin(pitch);
+  fYm_comp = -fZm*sin(roll)*sin(pitch)+fYm*cos(roll)-fXm*sin(roll)*cos(pitch);
+
  
   // Arctangent of y/x
   Heading = (atan2(fYm_comp,fXm_comp)*180.0)/M_PI;
@@ -187,6 +172,5 @@ double calculate_direction(double *MAG_READING, double *ACCEL_READING){
   Serial.print("Pitch (X): "); Serial.print(pitch_print); Serial.print("  ");
   Serial.print("Roll (Y): "); Serial.print(roll_print); Serial.print("  ");
   Serial.print("Heading: "); Serial.println(Heading);
-  delay(250);
   return Heading;
 }

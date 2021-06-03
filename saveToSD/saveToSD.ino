@@ -24,7 +24,7 @@
 //============ CONFIGURATION SETTINGS =============================
 //change the text inside the brackets here to suit your configuration
 const char deploymentDetails[] PROGMEM = "Reeferees Logger #1,magnetometer and accelerometer used as sensor,1134880L constant,UTC time set,if found contact: yourname@email.edu"; 
-const char dataCollumnLabels[] PROGMEM = "TimeStamp,Battery(mV),SDsaveDelta(mV),Compass Reading (deg),Tilt Angle,Raw Accel_X Reading (m/s^2),Raw Accel_Y Reading (m/s^2),Raw Accel_Z Reading (m/s^2), Raw Mag_X Reading (microT), Raw Mag_Y Reading (microT), Raw Mag_Z Reading (microT)"; //column header labels for your data
+const char dataCollumnLabels[] PROGMEM = "TimeStamp,Battery(mV),SDsaveDelta(mV),Compass Reading (deg),Tilt Angle, Velocity (m/s), Raw Accel_X Reading (m/s^2),Raw Accel_Y Reading (m/s^2),Raw Accel_Z Reading (m/s^2), Raw Mag_X Reading (microT), Raw Mag_Y Reading (microT), Raw Mag_Z Reading (microT)"; //column header labels for your data
 //more info on the PROGMEM modifier @ http://www.gammon.com.au/progmem
 
 #define SampleIntervalMinutes 1  // Options: 1,2,3,4,5,6,10,12,15,20,30 ONLY (must be a divisor of 60)
@@ -93,19 +93,33 @@ byte bytebuffer1 = 0;     // for functions that return a byte - usually comms wi
 byte bytebuffer2 = 0;     // second buffer for 16-bit sensor register readings
 int integerBuffer = 9999;    // for temp-swapping ADC readings
 float floatbuffer = 9999.9;  // for temporary float calculations
+#define analogInputPin A0    //for analog pin reading
+int analogPinReading = 0;
 
 //Sensor specific variables & defines:
 //====================================
+//enable TS_DS18B20 only if installed - otherwise comment out if not connected:
+//#define TS_DS18B20 8    //set this to the INPUT PIN connected to the sensors DATA wire
+// & don't forget you need a 4K7 pullup resistor (joining that data line to the high rail) for the DS18b20 to operate properly
+//#if defined(TS_DS18B20)   // variables for DS18B20 temperature sensor only included if #define TS_DS18B20
+//#include <OneWire.h>      // this sensor library from  http://www.pjrc.com/teensy/td_libs_OneWire.html
+//OneWire ds(TS_DS18B20);      
+// byte addr[8];
+// int ds18b20_TEMP_Raw = 0;
+// float ds18b20_TEMP_degC= 0.0;
+//#endif  //defined(TS_DS18B20)
+
 #include <Adafruit_Sensor.h>
 //#include <Adafruit_LSM303DLH_Mag.h>
 #include <Adafruit_LSM303_Accel.h>
 
-/* Assign a unique ID to this sensor at the same time */
-Adafruit_LSM303_Accel_Unified accel = Adafruit_LSM303_Accel_Unified(54321);
-//Adafruit_LSM303DLH_Mag_Unified mag = Adafruit_LSM303DLH_Mag_Unified(12345);
-
+// CHANGE COMPASS
 #include <LSM303.h>
 LSM303 compass;
+
+/* Assign a unique ID to this sensor at the same time */
+Adafruit_LSM303_Accel_Unified accel = Adafruit_LSM303_Accel_Unified(54321);
+//Adafruit_LSM303DLH_Mag_Unified mag = Adafruit_LSM303DLH_Mag_Unified(12345); // CHANGE COMPASS
 //======================================================================================================================
 //  *  *   *   *   *   *   SETUP   *   *   *   *   *
 //======================================================================================================================
@@ -159,6 +173,10 @@ bitSet (DIDR0, ADC3D);  // disable digital buffer on A3
   
   Serial.begin(115200);    // Always serial.begin because if 'anything' in some random library tries to print without it you get a HARD system freeze
   Wire.begin();          // Start the i2c interface
+
+  // CHANGE COMPASS
+  compass.init();
+  compass.enableDefault();
   
   RTC.begin();           // RTC initialization:
   RTC.turnOffAlarm(1);
@@ -239,6 +257,7 @@ bitSet (DIDR0, ADC3D);  // disable digital buffer on A3
   Serial.begin(115200);
   Serial.println("Accelerometer Test");
   Serial.println("");
+
   /* Initialise the sensor */
   if (!accel.begin()) {
     /* There was a problem detecting the ADXL345 ... check your connections */
@@ -246,11 +265,18 @@ bitSet (DIDR0, ADC3D);  // disable digital buffer on A3
     while (1)
       ;
   }
+  /* Display some basic information on this sensor */
+//  displayAccSensorDetails();
+
   // --------
+  // CHANGE COMPASS
+//
 //  Serial.println("Magnetometer Test");
 //  Serial.println("");
+// 
 //  /* Enable auto-gain */
 //  mag.enableAutoRange(true);
+// 
 //  /* Initialise the sensor */
 //  if (!mag.begin()) {
 //    /* There was a problem detecting the LSM303 ... check your connections */
@@ -258,7 +284,51 @@ bitSet (DIDR0, ADC3D);  // disable digital buffer on A3
 //    while (1)
 //      ;
 //  }
-  
+  /* Display some basic information on this sensor */
+//  displayMagSensorDetails();
+ 
+//#ifdef TS_DS18B20
+//  
+//  ds.search(addr);
+//  
+//  if ( !ds.search(addr))
+//  {
+//    Serial.println(F("ERROR: Did not find the DS18B20 Temp Sensor!"));Serial.flush();
+//    return;
+//  }
+//  else
+//  { 
+//    //set the DS18b20 to 12 bit (high resolution) mode
+//    ds.reset();             // rest 1-Wire
+//    ds.select(addr);        // select DS18B20
+//    ds.write(0x4E);         // write on scratchPad
+//    ds.write(0x00);         // User byte 0 - Unused
+//    ds.write(0x00);         // User byte 1 - Unused
+//    ds.write(0x7F);         // set up en 12 bits (0x7F)
+//    ds.reset();             // reset 1-Wire
+//    ds.select(addr);        // select DS18B20 
+//    ds.write(0x48);         // copy scratchpad to EEPROM
+//    delay(15);              // wait for end of EEPROM write
+//    
+//    Serial.print(F("DS18B20 found @ ROM addr:"));
+//    for (uint8_t i = 0; i < 8; i++) {
+//      Serial.write(' ');
+//      Serial.print(addr[i], HEX);
+//    }
+//    Serial.println();Serial.flush();
+//  }  // if ( !ds.search(addr))
+//  
+//#endif  //for #ifdef TS_DS18B20
+//
+////setting UNUSED digital pins to INPUT_PULLUP reduces noise & risk of accidental short
+////pinMode(7,INPUT_PULLUP); //only if you do not have anything connected to this pin
+////pinMode(8,INPUT_PULLUP); //only if you do not have anything connected to this pin
+////pinMode(9,INPUT_PULLUP); // NOT if you are you using this pin for the DS18b20!
+//#ifndef ECHO_TO_SERIAL
+// pinMode(0,INPUT_PULLUP); //but not if we are connected to usb
+// pinMode(1,INPUT_PULLUP); //then these pins are needed for RX & TX 
+//#endif
+
 //==================================================================================================================
 //Delay logger start until alarm times are in sync with sampling intervals
 //this delay prevents a "short interval" from occuring @ the first hour rollover
@@ -303,21 +373,97 @@ void loop() {
    Serial.print("System taking a new reading at:");  //(optional) debugging message
    Serial.println(TimeStamp);Serial.flush();
  #endif
+
+//// read the RTC temp register - Note: the DS3231 temp registers only update every 64seconds
+//  Wire.beginTransmission(DS3231_I2C_ADDRESS);
+//  Wire.write(0x11);       //the register where the temp data is stored
+//  Wire.endTransmission(); // nothing really happens until the complier sends the .endTransmission command
+//  Wire.requestFrom(DS3231_I2C_ADDRESS, 2);   //ask for two bytes of data
+//  if (Wire.available()) {
+//  byte tMSB = Wire.read();            //2’s complement int portion
+//  byte tLSB = Wire.read();             //fraction portion
+//  rtc_TEMP_degC = ((((short)tMSB << 8) | (short)tLSB) >> 6) / 4.0;  // Allows for readings below freezing: thanks to Coding Badly
+//  rtc_TEMP_degC = (rtc_TEMP_degC * 1.8) + 32.0; // To Convert Celcius to Fahrenheit
+//}
+//else {
+//  rtc_TEMP_degC = 999.9;  //if rtc_TEMP_degC contains 999.9, then you had a problem reading from the RTC!
+//}
+//#ifdef ECHO_TO_SERIAL
+//Serial.print(F(" TEMPERATURE from RTC is: "));
+//Serial.print(rtc_TEMP_degC); 
+//Serial.println(F(" Celsius"));
+//Serial.flush();
+//#endif
   
 digitalWrite(BLUE_PIN, LOW); //end of RTC communications
 pinMode(GREEN_PIN,INPUT_PULLUP); //green indicates sensor readings taking place
 LowPower.powerDown(SLEEP_30MS, ADC_OFF, BOD_ON); //optional delay here to make indicator pip more visible
 //============================================================
+// Read Analog Input
+analogReference(DEFAULT);analogRead(analogInputPin); //always throw away the first ADC reading
+delay(10);  //10msec delay gives Aref capacitor time to adjust
+
+//now you can do a single analog reading one time 
+analogPinReading = analogRead(analogInputPin);
+// OR you can read the analog input line multiple times, and feed those readings into an averaging or smoothing filter
+// One of my favorites for removing "single spike" errors from noisy sensor inputs is median3 which takes three values/readings as input
+  
+//    analogPinReading = median_of_3( analogRead(analogInputPin), analogRead(analogInputPin), analogRead(analogInputPin));
+  
+//you can use this filter with any sensor that generates only positive integer values
+
+//=====================================
+//Read the DS18b20 temperature Sensor:
+//#ifdef TS_DS18B20    
+//  ds18b20_TEMP_Raw = readDS18B20Temp();// Note: 750msec of sleep is embedded in this function while waiting for data!
+//  ds18b20_TEMP_degC =(float)ds18b20_TEMP_Raw*0.0625; //many 12 bit sensors use this same calculation
+//  #ifdef ECHO_TO_SERIAL
+//  Serial.print(F("DS18b20 Temp is: "));Serial.println(ds18b20_TEMP_degC); 
+//  #endif
+//#endif
+//digitalWrite(GREEN_PIN, LOW);
+
+
 
 // find the average for each set of readings
-double AVG_ACCEL_READING[] = {0.0, 0.0, 0.0};
-double AVG_MAG_READING[] = {0.0, 0.0, 0.0};
+double AVG_ACCEL_READING[3];
+double AVG_MAG_READING[3];
 
 loop_readings(AVG_ACCEL_READING, AVG_MAG_READING, 9);
 
 double TILT_ANGLE = calculate_tilt_angle(AVG_ACCEL_READING);
+double VELOCITY = calculate_velocity(TILT_ANGLE);
 double DIRECTION = calculate_direction(AVG_MAG_READING, AVG_ACCEL_READING);
 Serial.print("\n ------------------------ \n");
+
+//========================================================
+//Read Light Level with indicator LED color channels 
+// Modfied from  //https://playground.arduino.cc/Learning/LEDSensor  I added PIND for speed
+// An explaination of the reverse-bias LED reading technique https://www.sparkfun.com/news/2161
+// these logarithmic 'discharge time' readings get smaller as the amount of light increases
+//
+//#ifdef readRedLED 
+//uint32_t redLEDreading=readRedLEDchannel(); //call the function which reads the RED led channel
+//  #ifdef ECHO_TO_SERIAL
+//   Serial.print(F("RedLED= "));Serial.print(redLEDreading);Serial.flush();
+//  #endif
+//#endif  //readRedLED 
+//
+//#ifdef readGreenLED 
+//uint32_t greenLEDreading=readGreenLEDchannel(); //call the function which reads the RED led channel
+//  #ifdef ECHO_TO_SERIAL
+//   Serial.print(F("GreenLED= "));Serial.print(greenLEDreading);Serial.flush();
+//  #endif
+//#endif  //readGreenLED 
+//
+//#ifdef readBlueLED 
+//uint32_t blueLEDreading=readBlueLEDchannel(); //call the function which reads the RED led channel
+//  #ifdef ECHO_TO_SERIAL
+//   Serial.print(F("BlueLED= "));Serial.print(blueLEDreading);Serial.flush();
+//  #endif
+//#endif  //readBlueLED 
+// 
+//pinMode(RED_PIN,INPUT_PULLUP); //indicate SD saving
   
 // ========== Pre SD saving battery checks ==========
 #if defined (unregulated2xLithiumAA) || defined(ECHO_TO_SERIAL) 
@@ -343,10 +489,16 @@ if (preSDsaveBatterycheck < (systemShutdownVoltage+safetyMargin4SDsave+50)) {  /
     file.print(","); 
     file.print(safetyMargin4SDsave);
     file.print(",");  
+//    file.print(rtc_TEMP_degC); 
+//    file.print(",");   
+//    file.print(analogPinReading); 
+//    file.print(",");   
     file.print(DIRECTION); 
     file.print(",");   
     file.print(TILT_ANGLE); 
     file.print(",");   
+       file.print(VELOCITY); 
+    file.print(","); 
     for (int i = 0; i <3; i++){
       file.print(AVG_ACCEL_READING[i]);
       file.print(",");
@@ -355,6 +507,33 @@ if (preSDsaveBatterycheck < (systemShutdownVoltage+safetyMargin4SDsave+50)) {  /
       file.print(AVG_MAG_READING[j]);
       file.print(",");
     }
+    
+//#ifdef TS_DS18B20
+//    file.print(ds18b20_TEMP_Raw);
+//    file.print(",");
+//    file.print(ds18b20_TEMP_degC,3);
+//    file.print(",");
+
+    //OR if you start running out of program memory:
+    //char stringBuffer[8]; 
+    //stringBuffer[0] = '\0'; //empties stringBuffer by making first character a 'null' value
+    //dtostrf((ds18b20_TEMP_degC),7,3,stringBuffer); //7 characters total, with 3 ASCII characters after the decimal point.
+    //file.print(stringBuffer); //dtostrf saves exactly the right number of float digits without taking alot of progmem space
+    
+//#endif
+   
+#ifdef readRedLED 
+    file.print(redLEDreading);
+    file.print(",");
+#endif 
+#ifdef readGreenLED   
+    file.print(greenLEDreading);
+    file.print(","); 
+#endif 
+#ifdef readBlueLED   
+    file.print(blueLEDreading);
+    file.print(","); 
+#endif 
     file.println(); 
     file.close();
 
@@ -391,7 +570,8 @@ pinMode(BLUE_PIN,INPUT_PULLUP); // BLUE to indicate RTC events
     Serial.print(",");  
     Serial.print(safetyMargin4SDsave);
     Serial.print(", ");    
-    Serial.flush();
+    Serial.print(analogPinReading);
+    Serial.println(","); Serial.flush();
 #endif
   
 //============Set the next alarm time =============
@@ -702,63 +882,45 @@ newest = analogRead(A0);
 //  SENSOR READING FUNCTIONS
 //================================================================================================
 double read_magnetometer(double *MAG_READING){
-  compass.read();
-  MAG_READING[0] = compass.m.x;
-  MAG_READING[1] = compass.m.y;
-  MAG_READING[2] = compass.m.z;
+   // CHANGE COMPASS
+   compass.read();
+   MAG_READING[0] = compass.m.x;
+   MAG_READING[1] = compass.m.y;
+   MAG_READING[2] = compass.m.z;
 
-  Serial.print((String) "Mag Raw X: " + compass.m.x + "  ");
-  Serial.print((String) "Mag Raw Y: " +  compass.m.y + "  ");
-  Serial.print((String) "Mag Raw Z: " +  compass.m.z + "\n");
-//  /* Get a new sensor event */
-//  sensors_event_t event;
-//  mag.getEvent(&event);
-//
-//  /* Display the results (magnetic vector values are in micro-Tesla (uT)) */
-//  /* Get compass measurements */
-//  MAG_READING[0] = event.magnetic.x;
-//  MAG_READING[1] = event.magnetic.y;
-//  MAG_READING[2] = event.magnetic.z;
-//  
-//  Serial.print((String) "Mag Raw X: " + event.magnetic.x + "  ");
-//  Serial.print((String) "Mag Raw Y: " + event.magnetic.y + "  ");
-//  Serial.print((String) "Mag Raw Z: " + event.magnetic.z + "\n");
-  
+   Serial.print((String) "Mag Raw X: " + MAG_READING[0] + "  ");
+   Serial.print((String) "Mag Raw Y: " + MAG_READING[1] + "  ");
+   Serial.print((String) "Mag Raw Z: " + MAG_READING[2] + "\n");
 }
 
-/*
- * calcululations based on https://forum.arduino.cc/t/lsm303dlhc-calibration-pitch-roll-and-tilt-compensated-heading/256406
- * input: MAG_READING[3] - 3D measurements from magnetometer
- * input: ACCEL_READING[3] - 3D measurements from accelerometer
- * output: heading
- */
 double calculate_direction(double *MAG_READING, double *ACCEL_READING){
-    const float alpha = 0.15;
+  const float alpha = 0.15;
   float fXm = 0;
   float fYm = 0;
   float fZm = 0;
   float pitch, pitch_print, roll, roll_print, Heading, Xm_off, Ym_off, Zm_off, Xm_cal, Ym_cal, Zm_cal, fXm_comp, fYm_comp;
 
   // INPUT HERE: take these values from the Combined bias(b): field in Magneto
-  float combined_bias_x = -4211.532222;
-  float combined_bias_y = 31324.106405;
-  float combined_bias_z = -9758.227533;
+  float combined_bias_x = -442.469658;
+  float combined_bias_y = 18761.954610;
+  float combined_bias_z = -2437.724224;
 
   // INPUT HERE; take these values from the "Correction for combined scale factors..." field in Magneto
-  float correction_xcal_xoff = 0.001120;
-  float correction_xcal_yoff = 0.000058;
-  float correction_xcal_zoff = 0.000027;
-  float correction_ycal_xoff = 0.000058;
-  float correction_ycal_yoff = 0.001003;
-  float correction_ycal_zoff = 0.000013;
-  float correction_zcal_xoff = 0.000027;
-  float correction_zcal_yoff = 0.000013;
-  float correction_zcal_zoff = 0.001300;
-  
+  float correction_xcal_xoff = 0.001020;
+  float correction_xcal_yoff = 0.000018;
+  float correction_xcal_zoff = 0.000028;
+  float correction_ycal_xoff = 0.000018;
+  float correction_ycal_yoff = 0.001033;
+  float correction_ycal_zoff = 0.000005;
+  float correction_zcal_xoff = 0.000028;
+  float correction_zcal_yoff = 0.000005;
+  float correction_zcal_zoff = 0.001041;
+ 
   // Magnetometer calibration
   Xm_off = MAG_READING[0]*(100000.0/1100.0) - combined_bias_x;
   Ym_off = MAG_READING[1]*(100000.0/1100.0) - combined_bias_y;
   Zm_off = MAG_READING[2]*(100000.0/980.0 ) - combined_bias_z;
+
   Xm_cal =  correction_xcal_xoff*Xm_off + correction_xcal_yoff*Ym_off + correction_xcal_zoff*Zm_off;
   Ym_cal =  correction_ycal_xoff*Xm_off + correction_ycal_yoff*Ym_off + correction_ycal_zoff*Zm_off;
   Zm_cal =  correction_zcal_xoff*Xm_off + correction_zcal_yoff*Ym_off + correction_zcal_zoff*Zm_off;
@@ -770,39 +932,51 @@ double calculate_direction(double *MAG_READING, double *ACCEL_READING){
 
   // Pitch and roll
   roll  = atan2(ACCEL_READING[1], sqrt(ACCEL_READING[0]*ACCEL_READING[0] + ACCEL_READING[2]*ACCEL_READING[2]));
+
+//  pitch = atan2(-ACCEL_READING[2], sqrt(ACCEL_READING[1]*ACCEL_READING[1] + ACCEL_READING[0]*ACCEL_READING[0]));
   pitch = atan2(ACCEL_READING[0], sqrt(ACCEL_READING[1]*ACCEL_READING[1] + ACCEL_READING[2]*ACCEL_READING[2]));
+ 
   roll_print = roll*180.0/M_PI;
   pitch_print = pitch*180.0/M_PI;
-  
+ 
   // Tilt compensated magnetic sensor measurements
   fXm_comp = fXm*cos(pitch)+fZm*sin(pitch);
   fYm_comp = fXm*sin(roll)*sin(pitch)+fYm*cos(roll)-fZm*sin(roll)*cos(pitch);
-  
+ 
   // Arctangent of y/x
   Heading = (atan2(fYm_comp,fXm_comp)*180.0)/M_PI;
   if (Heading < 0)
   Heading += 360;
-  
+ 
   Serial.print("Pitch (X): "); Serial.print(pitch_print); Serial.print("  ");
   Serial.print("Roll (Y): "); Serial.print(roll_print); Serial.print("  ");
   Serial.print("Heading: "); Serial.println(Heading);
   return Heading;
 }
 
+
+
 //-------------------------
 
 double read_accelerometer(double *ACCEL_READING){
   sensors_event_t event1;
   accel.getEvent(&event1);
-  
+
+  /* Display the results (acceleration is measured in m/s^2) */
+  Serial.print("Acc Raw X: ");
+  Serial.print(event1.acceleration.x);
+  Serial.print("  ");
+  Serial.print("Acc Raw  Y: ");
+  Serial.print(event1.acceleration.y);
+  Serial.print("  ");
+  Serial.print("Acc Raw  Z: ");
+  Serial.print(event1.acceleration.z);
+  Serial.print("  ");
+  Serial.println("m/s^2");
+
   ACCEL_READING[0] = event1.acceleration.x;
   ACCEL_READING[1] = event1.acceleration.y;
   ACCEL_READING[2] = event1.acceleration.z;
-
-  /* Display the results (acceleration is measured in m/s^2) */
-  Serial.print((String) "Acc Raw X: " + event1.acceleration.x + "  ");
-  Serial.print((String) "Acc Raw Y: " + event1.acceleration.y + "  ");
-  Serial.print((String) "Acc Raw Z: " + event1.acceleration.z + "\n");
 }
 
 
@@ -810,7 +984,7 @@ double read_accelerometer(double *ACCEL_READING){
 double calculate_tilt_angle(double *ACCEL_READING){
   // set constants
   const double g = 9.216;
-  const double ACCEL_0[3] = {g, -0.133, 2.302}; // a0 acceleration vector (buoyant sensor)
+  const double ACCEL_0[3] = {g, -0.133, 2.302}; // a0 acceleration vector (hanging sensor)
 
   // calculate theta
   double a_numer = ACCEL_READING[0]*ACCEL_0[0] + ACCEL_READING[1]*ACCEL_0[1] + ACCEL_READING[2]*ACCEL_0[2];
@@ -825,11 +999,15 @@ double calculate_tilt_angle(double *ACCEL_READING){
   return theta*180/PI;
 }
 
-/*-------------------------------------
- * Reads the measurements from accelerometer + magnetometer n times, then creates an average for both 
- * input: array of doubles AVG_ACCEL_READING - will be {0, 0, 0} initially --> modified to have the average acceleration reading
- *        array of doubles AVG_MAD_READING - will be {0, 0, 0} initially --> modified to have the average magnetometer reading
-*/
+double calculate_velocity(double tilt_angle){
+  double velocity = 0.0001*(pow(tilt_angle,2)) - 0.0007*tilt_angle + 0.3404;
+  
+  Serial.print("Velocity: ");
+  Serial.print(velocity);
+  Serial.print("\n");
+  
+  return velocity;
+}
 double loop_readings(double *AVG_ACCEL_READING, double *AVG_MAG_READING, int n){
   for (int i = 0; i < n; i++) {
     double ACCEL_READING[3];
